@@ -176,7 +176,8 @@ public:
 		{
 		}
 
-		static const LanguageDefinition& CPlusPlus();
+		static const LanguageDefinition&CPlusPlus();
+		static const LanguageDefinition& CMinusMinus();
 		static const LanguageDefinition& HLSL();
 		static const LanguageDefinition& GLSL();
 		static const LanguageDefinition& C();

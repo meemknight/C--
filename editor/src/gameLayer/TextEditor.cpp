@@ -2737,6 +2737,43 @@ static bool TokenizeCStylePunctuation(const char * in_begin, const char * in_end
 	return false;
 }
 
+static bool TokenizeCminusminusStylePunctuation(const char *in_begin, const char *in_end, const char *&out_begin, const char *&out_end)
+{
+	(void)in_end;
+
+	switch (*in_begin)
+	{
+	case '[':
+	case ']':
+	case '{':
+	case '}':
+	case '!':
+	case '%':
+	case '^':
+	case '*':
+	case '(':
+	case ')':
+	case '-':
+	case '+':
+	case '=':
+	case '~':
+	case '|':
+	case '<':
+	case '>':
+	case ':':
+	case '/':
+	case ';':
+	case ',':
+	case '.':
+	out_begin = in_begin;
+	out_end = in_begin + 1;
+	return true;
+	}
+
+	return false;
+}
+
+
 const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::CPlusPlus()
 {
 	static bool inited = false;
@@ -2805,6 +2842,66 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::CPlusPlus(
 	}
 	return langDef;
 }
+
+const TextEditor::LanguageDefinition &TextEditor::LanguageDefinition::CMinusMinus()
+{
+	static bool inited = false;
+	static LanguageDefinition langDef;
+	if (!inited)
+	{
+		static const char *const keywords[] = {
+		"if", "while","int32","float","void","return"
+		};
+		for (auto &k : keywords)
+			langDef.mKeywords.insert(k);
+
+		//static const char *const identifiers[] = {};
+		//for (auto &k : identifiers)
+		//{
+		//	Identifier id;
+		//	id.mDeclaration = "Built-in function";
+		//	langDef.mIdentifiers.insert(std::make_pair(std::string(k), id));
+		//}
+
+		langDef.mTokenize = [](const char *in_begin, const char *in_end, const char *&out_begin, const char *&out_end, PaletteIndex &paletteIndex) -> bool
+		{
+			paletteIndex = PaletteIndex::Max;
+
+			while (in_begin < in_end && isascii(*in_begin) && isblank(*in_begin))
+				in_begin++;
+
+			if (in_begin == in_end)
+			{
+				out_begin = in_end;
+				out_end = in_end;
+				paletteIndex = PaletteIndex::Default;
+			}
+			else if (TokenizeCStyleString(in_begin, in_end, out_begin, out_end))
+				paletteIndex = PaletteIndex::String;
+			else if (TokenizeCStyleCharacterLiteral(in_begin, in_end, out_begin, out_end))
+				paletteIndex = PaletteIndex::CharLiteral;
+			else if (TokenizeCStyleIdentifier(in_begin, in_end, out_begin, out_end))
+				paletteIndex = PaletteIndex::Identifier;
+			else if (TokenizeCStyleNumber(in_begin, in_end, out_begin, out_end))
+				paletteIndex = PaletteIndex::Number;
+			else if (TokenizeCminusminusStylePunctuation(in_begin, in_end, out_begin, out_end))
+				paletteIndex = PaletteIndex::Punctuation;
+
+			return paletteIndex != PaletteIndex::Max;
+		};
+
+		langDef.mCommentStart = "/*";
+		langDef.mCommentEnd = "*/";
+		langDef.mSingleLineComment = "//";
+
+		langDef.mCaseSensitive = true;
+		langDef.mAutoIndentation = true;
+		langDef.mName = "C--";
+		inited = true;
+	}
+	return langDef;
+}
+
 
 const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::HLSL()
 {

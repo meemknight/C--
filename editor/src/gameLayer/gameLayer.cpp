@@ -23,6 +23,7 @@ bool initGame()
 			std::istreambuf_iterator<char>());
 		
 		textEditor.SetText(str);
+		textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CMinusMinus());
 	}
 	else
 	{
