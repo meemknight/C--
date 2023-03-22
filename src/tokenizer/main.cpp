@@ -238,7 +238,8 @@ struct Token
 		else if (type == Types::op) { return "Opperator: " + text + " -> " + opperators[secondaryType]; }
 		else if (type == Types::number) 
 		{
-			if (secondaryType != TypeNumber::int32 && TypeNumber::real32) { return "internal error"; }
+			if (secondaryType != TypeNumber::int32 && secondaryType != TypeNumber::real32) 
+				{ return "internal error" + std::to_string(__LINE__); }
 			return (secondaryType == TypeNumber::int32 ? "Int32: " : "Float: ") +
 				(secondaryType == TypeNumber::int32 ? std::to_string(reprezentation.i) : std::to_string(reprezentation.f));
 		}
@@ -286,6 +287,7 @@ std::vector<Token> tokenize(const std::string_view &input)
 			if (!currentToken.stringLiteralClosed)
 			{
 				currentToken.type = Token::Types::error; //error parsing string literal, not closed
+				currentToken.text = "Error parsing string iteral not closed.";
 				ret.push_back(currentToken);
 			}
 			else
@@ -337,6 +339,7 @@ std::vector<Token> tokenize(const std::string_view &input)
 				)
 			{
 				currentToken.type = Token::Types::error; //error parsing string literal, not closed
+				currentToken.text = "Error parsing string iteral not closed.";
 				endCurrentToken();
 			}
 			else
@@ -366,10 +369,14 @@ std::vector<Token> tokenize(const std::string_view &input)
 			{
 				//signal error
 				currentToken.type = Token::Types::error;
+				currentToken.text += input[index];
+				currentToken.text = "Invalid number: " + currentToken.text;
 			}
 			else if (parsingOperator())
 			{
 				currentToken.type = Token::Types::error;
+				currentToken.text += input[index];
+				currentToken.text = "Invalid number: " + currentToken.text;
 			}
 			else
 			{
@@ -455,13 +462,11 @@ int main()
 		{
 			std::cout << i.format() << "\n";
 		}
-
 	}
 	else
 	{
 		std::cout << "Err oppening file\n";
 	}
-
 
 
 	std::cin.get();
