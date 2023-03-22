@@ -5,12 +5,39 @@
 #include <types.h>
 #include <fstream>
 
+struct TextPosition
+{
+	long int pos=0;
+	long int line=0;
+	long int totalPos=0;
+	void newLine()
+	{
+		pos = 0;
+		totalPos++;
+		line++;
+	}
+
+	void increment()
+	{
+		pos++;
+		totalPos++;
+	}
+};
+
 struct Token
 {
+	TextPosition begin = {};
+	TextPosition end = {};
+
 	Token() {};
 	Token(int type):type(type) {};
 
-	Token(int type, char c):type(type) { text = c; };
+	Token(int type, char c, TextPosition pos):type(type) { text = c; begin = pos; end = pos; };
+	Token(int type, std::string_view v, TextPosition begin):type(type) { text = v; this->begin = begin;
+		end = begin;
+		end.pos += v.size();
+		end.totalPos += v.size();
+	};
 
 	struct Types
 	{
@@ -18,7 +45,7 @@ struct Token
 		{
 			none = 0,
 			error,
-			paranthases,
+			parenthesis,
 			semicolin,
 			stringLiteral,
 			op,
@@ -219,33 +246,40 @@ struct Token
 		}
 
 	}
+	
+	std::string formatTextPos()
+	{
+		return "(" + std::to_string(begin.line) + ", " + std::to_string(begin.pos) + ")";
+	}
 
 	//for printing
 	std::string format()
 	{
-		
+		std::string rez = {};
 		if (type == Types::none)
 		{
-			return {};
+			rez = {};
 		}
 		else if(type == Types::error)
 		{
-			return "Error: " + text;
+			rez = "Error: " + text;
 		}
-		else if (type == Types::paranthases) { return "Paranthase: " + text; }
-		else if (type == Types::semicolin) { return "Semicolin [;]"; }
-		else if (type == Types::stringLiteral) { return "String Literal: \"" + text + "\""; }
-		else if (type == Types::op) { return "Opperator: " + text + " -> " + opperators[secondaryType]; }
+		else if (type == Types::parenthesis) { rez = "Parenthesis: " + text; }
+		else if (type == Types::semicolin) { rez = "Semicolin [;]"; }
+		else if (type == Types::stringLiteral) { rez = "String Literal: \"" + text + "\""; }
+		else if (type == Types::op) { rez = "Opperator: " + text + " -> " + opperators[secondaryType]; }
 		else if (type == Types::number) 
 		{
 			if (secondaryType != TypeNumber::int32 && secondaryType != TypeNumber::real32) 
-				{ return "internal error" + std::to_string(__LINE__); }
-			return (secondaryType == TypeNumber::int32 ? "Int32: " : "Float: ") +
+				{ rez =  "internal error" + std::to_string(__LINE__); }
+			rez = (secondaryType == TypeNumber::int32 ? "Int32: " : "Float: ") +
 				(secondaryType == TypeNumber::int32 ? std::to_string(reprezentation.i) : std::to_string(reprezentation.f));
 		}
 		else if (type == Types::keyWord)
-		{ return "keyword: " + text + " -> " + keyWords[secondaryType]; }
-		else if (type == Types::userDefinedWord) { return "User defined keyword: " + text; }
+		{ rez =  "keyword: " + text + " -> " + keyWords[secondaryType]; }
+		else if (type == Types::userDefinedWord) { rez = "User defined keyword: " + text; }
+		
+		return rez + " " + formatTextPos();
 	}
 };
 
@@ -255,7 +289,8 @@ std::vector<Token> tokenize(const std::string_view &input)
 	std::vector<Token> ret;
 	ret.reserve(1000);
 
-
+	TextPosition currentTextPosition;
+	TextPosition startTextPosition;
 	Token currentToken(Token::Types::none);
 	int currentParsingType = 0;
 
@@ -276,6 +311,10 @@ std::vector<Token> tokenize(const std::string_view &input)
 
 	auto endCurrentToken = [&]()
 	{
+		currentToken.begin = startTextPosition;
+		currentToken.end = currentTextPosition;
+		startTextPosition = currentTextPosition;
+
 		if (currentToken.isEmpty()) { return; }
 
 		if (currentToken.type == Token::Types::error)
@@ -321,26 +360,50 @@ std::vector<Token> tokenize(const std::string_view &input)
 		currentParsingType = 0;
 
 	};
-	
+
 	for (long int index = 0; index < input.size(); index++)
 	{
+		auto performIncrementation = [&]()
+		{
+			if (
+				input[index] == '\n'
+				)
+			{
+				currentTextPosition.newLine();
+			}
+			else if (input[index] != 0 && input[index] > 8 && input[index] != '\r')
+			{
+				currentTextPosition.increment();
+			}
+		};
 
+		if (input == "\v")
+		{
+			ret.push_back(Token(Token::Types::error, "Vertical tab not supported", {}));
+			performIncrementation();
+			endCurrentToken();
+			continue;
+		}else
 		if (parsingStringLiteral())
 		{
 			if (input[index] == '"')
 			{
 				currentToken.stringLiteralClosed = true;
 				currentToken.type = Token::Types::stringLiteral;
+				performIncrementation();
 				endCurrentToken();
+				continue;
 			}
 			else if(
 				input[index] == '\n'
-				||input[index] == '\v'
+				|| input[index] == '\v'
 				)
 			{
 				currentToken.type = Token::Types::error; //error parsing string literal, not closed
 				currentToken.text = "Error parsing string iteral not closed.";
+				performIncrementation();
 				endCurrentToken();
+				continue;
 			}
 			else
 			{
@@ -348,20 +411,33 @@ std::vector<Token> tokenize(const std::string_view &input)
 			}
 
 		}else
-		if (isspace(input[index]))
+		if (isspace(input[index])) 
 		{
+			if (input[index] == '\t') 
+			{
+				int a = 0; 
+			}
+
+			performIncrementation();
 			endCurrentToken();
-		}else
+			continue;
+
+		}else //no more new line possible
 		if (isParanthesis(input[index]))
 		{
+			auto prevPos = currentTextPosition;
+			performIncrementation();
 			endCurrentToken();
-			
-			ret.push_back(Token(Token::Types::paranthases, input[index]));
+			ret.push_back(Token(Token::Types::parenthesis, input[index], prevPos));
+			continue;
 		}
 		else if (input[index] == ';')
 		{
+			auto prevPos = currentTextPosition;
+			performIncrementation();
 			endCurrentToken();
-			ret.push_back(Token(Token::Types::semicolin));
+			ret.push_back(Token(Token::Types::semicolin, 0, prevPos));
+			continue;
 		}
 		else if (isalpha(input[index]) || input[index] == '_')
 		{
@@ -392,15 +468,14 @@ std::vector<Token> tokenize(const std::string_view &input)
 				endCurrentToken();
 				currentParsingType = ParsingTypes::number;
 				currentToken.type = Token::Types::number;
+				currentToken.text += input[index];
 			}
 			else if (parsingNone())
 			{
 				currentParsingType = ParsingTypes::number;
 				currentToken.type = Token::Types::number;
+				currentToken.text += input[index];
 			}
-
-			currentToken.text += input[index];
-
 		}
 		else if (isOperatorSymbol(input[index]))
 		{
@@ -429,6 +504,7 @@ std::vector<Token> tokenize(const std::string_view &input)
 				currentToken.type = Token::Types::op;
 				currentToken.text += input[index];
 			}
+
 		}
 		else if (input[index] == '"')
 		{
@@ -438,6 +514,7 @@ std::vector<Token> tokenize(const std::string_view &input)
 			currentToken.stringLiteralClosed = false;
 		}
 
+		performIncrementation();
 
 	}
 
