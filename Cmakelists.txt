@@ -1,12 +1,44 @@
 cmake_minimum_required(VERSION 3.13)
-add_subdirectory("thirdParty/profilerLib")
-add_subdirectory("common")
-add_subdirectory("tokenizer")
-
-
-project(cminusminus)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(main1 "${CMAKE_CURRENT_SOURCE_DIR}/tokenizerTest/main.cpp")
-target_link_libraries(main1 PRIVATE profilerLib common tokenizer)
+project(cminusminus)
+
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(thirdparty/glfw-3.3.2)
+add_subdirectory(thirdparty/glad)
+add_subdirectory(thirdparty/imgui-docking)
+add_subdirectory(thirdparty/profilerLib)
+add_subdirectory(thirdparty/glm)
+add_subdirectory(common)
+add_subdirectory(tokenizer)
+
+
+
+add_executable(tokenizerTest "${CMAKE_CURRENT_SOURCE_DIR}/tokenizerTest/main.cpp")
+target_link_libraries(tokenizerTest PRIVATE profilerLib common tokenizer)
+
+target_compile_definitions(tokenizerTest PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/") # This is useful to get an ASSETS_PATH in your IDE during development but you should comment this if you compile a release version and uncomment the next line
+#target_compile_definitions(tokenizerTest PUBLIC RESOURCES_PATH="./resources/") # Uncomment this line to setup the ASSETS_PATH macro to the final assets directory when you share the game
+
+
+file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/editor/src/*.cpp")
+add_executable(editor)
+
+target_compile_definitions(editor PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/") # This is useful to get an ASSETS_PATH in your IDE during development but you should comment this if you compile a release version and uncomment the next line
+#target_compile_definitions(editor PUBLIC RESOURCES_PATH="./resources/") # Uncomment this line to setup the ASSETS_PATH macro to the final assets directory when you share the game
+
+
+target_sources(editor PRIVATE ${EDITOR_SOURCES} )
+
+target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/include/")
+target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/include/gameLayer/")
+target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/include/platform/")
+
+target_link_libraries(editor PRIVATE glfw glad glm imgui profilerLib common tokenizer)
+

@@ -5,7 +5,7 @@
 
 int main()
 {
-	std::ifstream f("main.cmm");
+	std::ifstream f(RESOURCES_PATH "main.cmm");
 	if (f.is_open())
 	{
 		std::string str((std::istreambuf_iterator<char>(f)),
@@ -22,7 +22,7 @@ int main()
 	{
 		std::cout << "Err oppening file\n";
 	}
-
+	
 
 	std::cin.get();
 	return 0;
