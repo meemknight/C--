@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.13)
 add_subdirectory("thirdParty/profilerLib")
+add_subdirectory("common")
+add_subdirectory("tokenizer")
 
 
-project(tokenizer)
+project(cminusminus)
+
 set(CMAKE_CXX_STANDARD 17)
-file(GLOB_RECURSE TOKENIZER_CPP CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/tokenizer/*.cpp")
-file(GLOB_RECURSE COMMON_CPP CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp")
-add_executable(main1 ${TOKENIZER_CPP} ${COMMON_CPP})
-target_include_directories(main1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-target_link_libraries(main1 PRIVATE profilerLib)
+
+add_executable(main1 "${CMAKE_CURRENT_SOURCE_DIR}/tokenizerTest/main.cpp")
+target_link_libraries(main1 PRIVATE profilerLib common tokenizer)
