@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 #include <types.h>
+#include <assert.h>
 
 struct TextPosition
 {
@@ -289,3 +290,7 @@ struct Token
 };
 
 std::vector<Token> tokenize(const std::string_view &input);
+
+Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd);
+
+std::vector<Token> tokenize2(const std::string_view &input);

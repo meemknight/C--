@@ -11,7 +11,7 @@ int main()
 		std::string str((std::istreambuf_iterator<char>(f)),
 			std::istreambuf_iterator<char>());
 
-		auto rez = tokenize(str);
+		auto rez = tokenize2(str);
 
 		for (auto &i : rez)
 		{
