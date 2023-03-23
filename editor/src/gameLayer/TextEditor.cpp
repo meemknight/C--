@@ -2849,26 +2849,26 @@ const TextEditor::LanguageDefinition &TextEditor::LanguageDefinition::CMinusMinu
 	static LanguageDefinition langDef;
 	if (!inited)
 	{
-		static const char *const keywords[] = {
-		"if", "while","int32","float","void","return"
-		};
-		for (auto &k : keywords)
-			langDef.mKeywords.insert(k);
+		//static const char *const keywords[] = {
+		//"if", "while","int32","float","void","return"
+		//};
+		//for (auto &k : keywords)
+		//	langDef.mKeywords.insert(k);
 
-		//static const char *const identifiers[] = {};
-		//for (auto &k : identifiers)
-		//{
-		//	Identifier id;
-		//	id.mDeclaration = "Built-in function";
-		//	langDef.mIdentifiers.insert(std::make_pair(std::string(k), id));
-		//}
+		static const char *const identifiers[] = {"main"};
+		for (auto &k : identifiers)
+		{
+			Identifier id;
+			id.mDeclaration = "Built-in function";
+			langDef.mIdentifiers.insert(std::make_pair(std::string(k), id));
+		}
 
 		langDef.mTokenize = [](const char *in_begin, const char *in_end, const char *&out_begin, const char *&out_end, PaletteIndex &paletteIndex) -> bool
 		{
 			paletteIndex = PaletteIndex::Max;
 
-			while (in_begin < in_end && isascii(*in_begin) && isblank(*in_begin))
-				in_begin++;
+			//while (in_begin < in_end && isascii(*in_begin) && isblank(*in_begin))
+			//	in_begin++;
 
 			if (in_begin == in_end)
 			{
@@ -2876,16 +2876,42 @@ const TextEditor::LanguageDefinition &TextEditor::LanguageDefinition::CMinusMinu
 				out_end = in_end;
 				paletteIndex = PaletteIndex::Default;
 			}
-			else if (TokenizeCStyleString(in_begin, in_end, out_begin, out_end))
-				paletteIndex = PaletteIndex::String;
-			else if (TokenizeCStyleCharacterLiteral(in_begin, in_end, out_begin, out_end))
-				paletteIndex = PaletteIndex::CharLiteral;
-			else if (TokenizeCStyleIdentifier(in_begin, in_end, out_begin, out_end))
-				paletteIndex = PaletteIndex::Identifier;
-			else if (TokenizeCStyleNumber(in_begin, in_end, out_begin, out_end))
-				paletteIndex = PaletteIndex::Number;
-			else if (TokenizeCminusminusStylePunctuation(in_begin, in_end, out_begin, out_end))
-				paletteIndex = PaletteIndex::Punctuation;
+			else
+			{
+				auto rez = tokenize(in_begin, in_end, out_begin, out_end);
+
+				if (rez.type == Token::Types::none)
+				{
+					paletteIndex = PaletteIndex::Default;
+				}
+				else if (rez.type == Token::Types::error) { paletteIndex = PaletteIndex::ErrorMarker; }
+				else if (rez.type == Token::Types::parenthesis) { paletteIndex = PaletteIndex::Default; }
+				else if (rez.type == Token::Types::semicolin) { paletteIndex = PaletteIndex::Default; }
+				else if (rez.type == Token::Types::stringLiteral) { paletteIndex = PaletteIndex::String; }
+				else if (rez.type == Token::Types::op) { paletteIndex = PaletteIndex::Punctuation; }
+				else if (rez.type == Token::Types::number) { paletteIndex = PaletteIndex::Number; }
+				else if (rez.type == Token::Types::keyWord) { paletteIndex = PaletteIndex::Keyword; }
+				else if (rez.type == Token::Types::userDefinedWord) { paletteIndex = PaletteIndex::Identifier; }
+
+			}
+
+
+			//if (in_begin == in_end)
+			//{
+			//	out_begin = in_end;
+			//	out_end = in_end;
+			//	paletteIndex = PaletteIndex::Default;
+			//}
+			//else if (TokenizeCStyleString(in_begin, in_end, out_begin, out_end))
+			//	paletteIndex = PaletteIndex::String;
+			//else if (TokenizeCStyleCharacterLiteral(in_begin, in_end, out_begin, out_end))
+			//	paletteIndex = PaletteIndex::CharLiteral;
+			//else if (TokenizeCStyleIdentifier(in_begin, in_end, out_begin, out_end))
+			//	paletteIndex = PaletteIndex::Identifier;
+			//else if (TokenizeCStyleNumber(in_begin, in_end, out_begin, out_end))
+			//	paletteIndex = PaletteIndex::Number;
+			//else if (TokenizeCminusminusStylePunctuation(in_begin, in_end, out_begin, out_end))
+			//	paletteIndex = PaletteIndex::Punctuation;
 
 			return paletteIndex != PaletteIndex::Max;
 		};
