@@ -27,18 +27,14 @@ struct TextPosition
 struct Token
 {
 	TextPosition begin = {};
-	TextPosition end = {};
 
 	Token() {};
 	Token(int type):type(type) {};
 
-	Token(int type, char c, TextPosition pos):type(type) { text = c; begin = pos; end = pos; end.increment(); };
+	Token(int type, char c, TextPosition pos):type(type) { text = c; begin = pos; };
 	Token(int type, std::string_view v, TextPosition begin):type(type)
 	{
 		text = v; this->begin = begin;
-		end = begin;
-		end.pos += v.size();
-		end.totalPos += v.size();
 	};
 
 	struct Types
@@ -289,6 +285,6 @@ struct Token
 	}
 };
 
-Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd);
+Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd, TextPosition &t);
 
 std::vector<Token> tokenize2(const std::string_view &input);

@@ -2878,7 +2878,7 @@ const TextEditor::LanguageDefinition &TextEditor::LanguageDefinition::CMinusMinu
 			}
 			else
 			{
-				auto rez = tokenize(in_begin, in_end, out_begin, out_end);
+				auto rez = tokenize(in_begin, in_end, out_begin, out_end, {});
 
 				if (rez.type == Token::Types::none)
 				{

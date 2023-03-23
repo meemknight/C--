@@ -1,13 +1,23 @@
 #include "tokenizer.h"
 
 
-Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd)
+Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd, TextPosition &textPos)
 {
 
 	assert(begin <= end);
 
+
 	while ((begin < end) && (*begin == ' ' || *begin == '\n' || *begin == '\t' || *begin == '\r'))
 	{
+		if (*begin == ' ' || *begin == '\t')
+		{
+			textPos.increment();
+		}
+		else if (*begin == '\n')
+		{
+			textPos.newLine();
+		}
+
 		begin++;
 	}
 
@@ -19,9 +29,9 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		return Token();
 	}
 
-	TextPosition currentTextPosition;
-	TextPosition startTextPosition;
+	//TextPosition currentTextPosition;
 	Token currentToken(Token::Types::none);
+	currentToken.begin = textPos;
 	int currentParsingType = 0;
 
 	enum ParsingTypes
@@ -41,10 +51,6 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 
 	auto endCurrentToken = [&]()
 	{
-		currentToken.begin = startTextPosition;
-		currentToken.end = currentTextPosition;
-		startTextPosition = currentTextPosition;
-
 		if (currentToken.isEmpty()) { return; }
 
 		if (currentToken.type == Token::Types::error)
@@ -105,18 +111,18 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 				*begin == '\n'
 				)
 			{
-				currentTextPosition.newLine();
+				textPos.newLine();
 			}
 			else if (*begin != 0 && *begin > 8 && *begin != '\r')
 			{
-				currentTextPosition.increment();
+				textPos.increment();
 			}
 		};
 	
 		if (*begin == '\v')
 		{
 			currentToken = Token(Token::Types::error, "Vertical tab not supported", {});
-			performIncrementation();
+			//performIncrementation();
 			//endCurrentToken();
 			setOut();
 			return currentToken;
@@ -128,7 +134,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 			{
 				currentToken.stringLiteralClosed = true;
 				currentToken.type = Token::Types::stringLiteral;
-				performIncrementation();
+				//performIncrementation();
 				endCurrentToken();
 				setOut();
 				return currentToken;
@@ -140,7 +146,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 			{
 				currentToken.type = Token::Types::error; //error parsing string literal, not closed
 				currentToken.text = "Error parsing string iteral not closed.";
-				performIncrementation();
+				//performIncrementation();
 				//endCurrentToken();
 				setOut();
 				return currentToken;
@@ -155,7 +161,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		if (isspace(*begin))
 		{
 	
-			performIncrementation();
+			//performIncrementation();
 			endCurrentToken();
 			setOut();
 			return currentToken;
@@ -166,15 +172,16 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		{
 			if (currentToken.isEmpty() && parsingNone())
 			{
-				currentToken = Token(Token::Types::parenthesis, *begin, currentTextPosition);
-				performIncrementation();
+				currentToken = Token(Token::Types::parenthesis, *begin, textPos);
+				//performIncrementation();
 				begin++; //we have parsed this item
+				performIncrementation();
 				setOut();
 				return currentToken;
 			}
 			else
 			{
-				performIncrementation();
+				//performIncrementation();
 				endCurrentToken();
 				setOut();
 				return currentToken;
@@ -184,15 +191,16 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		{
 			if (currentToken.isEmpty() && parsingNone())
 			{
-				currentToken = Token(Token::Types::semicolin, 0, currentTextPosition);
-				performIncrementation();
+				currentToken = Token(Token::Types::semicolin, 0, textPos);
+				//performIncrementation();
 				begin++; //we have parsed this item
+				performIncrementation();
 				setOut();
 				return currentToken;
 			}
 			else
 			{
-				performIncrementation();
+				//performIncrementation();
 				endCurrentToken();
 				setOut();
 				return currentToken;
@@ -303,9 +311,9 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		}
 	
 		performIncrementation();
-	
 	}
 	
+
 	endCurrentToken();
 
 	return currentToken;
@@ -319,12 +327,14 @@ std::vector<Token> tokenize2(const std::string_view &input)
 
 	std::vector<Token> ret;
 
+	TextPosition textPos;
+
 	while (begin < end)
 	{
 		const char *nb = 0;
 		const char *ne = 0;
 
-		auto t = tokenize(begin, end, nb, ne);
+		auto t = tokenize(begin, end, nb, ne, textPos);
 		begin = ne;
 
 		if(!t.isEmpty())
