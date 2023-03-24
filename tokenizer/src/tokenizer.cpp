@@ -135,6 +135,10 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 				currentToken.stringLiteralClosed = true;
 				currentToken.type = Token::Types::stringLiteral;
 				//performIncrementation();
+
+				begin++; //we have parsed this item
+				performIncrementation();
+
 				endCurrentToken();
 				setOut();
 				return currentToken;
@@ -220,11 +224,15 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 			}
 			else if (parsingOperator())
 			{
-				currentToken.type = Token::Types::error;
-				currentToken.text += *begin;
-				currentToken.text = "Invalid number: " + currentToken.text;
+				endCurrentToken();
 				setOut();
 				return currentToken;
+
+				//currentToken.type = Token::Types::error;
+				//currentToken.text += *begin;
+				//currentToken.text = "Invalid number: " + currentToken.text;
+				//setOut();
+				//return currentToken;
 			}
 			else
 			{
@@ -320,7 +328,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 
 }
 
-std::vector<Token> tokenize2(const std::string_view &input)
+std::vector<Token> tokenize(const std::string_view &input)
 {
 	const char *begin = input.data();
 	const char *end = begin + input.size();

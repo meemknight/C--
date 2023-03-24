@@ -34,15 +34,16 @@ bool initGame()
 	return true;
 }
 
+std::vector<Token> tokens;
 
 
 bool gameLogic(float deltaTime)
 {
 #pragma region init stuff
 	int w = 0; int h = 0;
-	w= platform::getWindowSizeX();
+	w = platform::getWindowSizeX();
 	h = platform::getWindowSizeY();
-	
+
 	glViewport(0, 0, w, h);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -56,8 +57,27 @@ bool gameLogic(float deltaTime)
 		textEditor.Render("TextEditor");
 
 	}
-
 	ImGui::End();
+
+
+	if (ImGui::Begin("Console"))
+	{
+		if (ImGui::Button("test"))
+		{
+			tokens.clear();
+			auto rez = textEditor.GetText();
+			tokens = tokenize(rez);
+		}
+
+		for (auto &t : tokens)
+		{
+			ImGui::Text(t.format().c_str());
+		}
+
+	}
+	ImGui::End();
+
+
 
 
 	return true;

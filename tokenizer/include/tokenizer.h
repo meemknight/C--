@@ -287,4 +287,4 @@ struct Token
 
 Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd, TextPosition &t);
 
-std::vector<Token> tokenize2(const std::string_view &input);
+std::vector<Token> tokenize(const std::string_view &input);
