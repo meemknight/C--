@@ -2,6 +2,12 @@
 
 void main()
 {
-	int32 test = 0 0;
+	int32 test = 0 0 0.0111;
+	0.000.1 "error"
+
+	" long string 1234 .+=+ + "
+
+	int32 a; a = a + b+a + 1+1+b+1 + b + 10.0 + a;
+
 	return 0;
 }

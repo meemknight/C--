@@ -2130,8 +2130,7 @@ std::string TextEditor::GetCurrentLineText()const
 }
 
 void TextEditor::ProcessInputs()
-{
-}
+{}
 
 void TextEditor::Colorize(int aFromLine, int aLines)
 {
@@ -2140,7 +2139,7 @@ void TextEditor::Colorize(int aFromLine, int aLines)
 	mColorRangeMax = std::max(mColorRangeMax, toLine);
 	mColorRangeMin = std::max(0, mColorRangeMin);
 	mColorRangeMax = std::max(mColorRangeMin, mColorRangeMax);
-	mCheckComments = true;
+	mCheckComments = false;
 }
 
 void TextEditor::ColorizeRange(int aFromLine, int aToLine)
@@ -2893,6 +2892,7 @@ const TextEditor::LanguageDefinition &TextEditor::LanguageDefinition::CMinusMinu
 				else if (rez.type == Token::Types::number) { paletteIndex = PaletteIndex::Number; }
 				else if (rez.type == Token::Types::keyWord) { paletteIndex = PaletteIndex::Keyword; }
 				else if (rez.type == Token::Types::userDefinedWord) { paletteIndex = PaletteIndex::Identifier; }
+				else if (rez.type == Token::Types::comment) { paletteIndex = PaletteIndex::Comment; }
 
 			}
 

@@ -41,6 +41,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		number,
 		op,
 		stringLiteral,
+		comment,
 	};
 
 	auto parsingNumber = [&]() { return currentParsingType == number; };
@@ -48,6 +49,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 	auto parsingOperator = [&]() { return currentParsingType == op; };
 	auto parsingStringLiteral = [&]() { return currentParsingType == stringLiteral; };
 	auto parsingNone = [&]() { return currentParsingType == none; };
+	auto parsingComment = [&]() { return currentParsingType == comment; };
 
 	auto endCurrentToken = [&]()
 	{
@@ -56,6 +58,10 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		if (currentToken.type == Token::Types::error)
 		{
 			return; //finished
+		}
+		else if (currentToken.type == Token::Types::comment)
+		{
+			return;
 		}
 		else if (currentToken.type == Token::Types::stringLiteral)
 		{
@@ -161,6 +167,19 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 			}
 	
 		}
+		else if (parsingComment())
+		{
+			if (*begin == '\n')
+			{
+				endCurrentToken();
+				setOut();
+				return currentToken;
+			}
+			else
+			{
+				currentToken.text += *begin;
+			}
+		}
 		else
 		if (isspace(*begin))
 		{
@@ -265,6 +284,29 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		}
 		else if (isOperatorSymbol(*begin))
 		{
+			if (*begin == '/')
+			{
+				if (begin < end - 1)
+				{
+					if (begin[1] == '/')
+					{
+						if (parsingNone() && currentToken.isEmpty())
+						{
+							currentParsingType = ParsingTypes::comment;
+							currentToken.type = Token::Types::comment;
+						}
+						else
+						{
+							endCurrentToken();
+							setOut();
+							return currentToken;
+						}
+					}
+				}
+				
+			}
+
+			if(!parsingComment())
 			if (parsingOperator())
 			{
 				currentToken.text += *begin;

@@ -50,6 +50,7 @@ struct Token
 			number,
 			keyWord,
 			userDefinedWord,
+			comment,
 		};
 	};
 
@@ -280,7 +281,11 @@ struct Token
 			rez = "keyword: " + text + " -> " + keyWords[secondaryType];
 		}
 		else if (type == Types::userDefinedWord) { rez = "User defined keyword: " + text; }
+		else if (type == Types::comment)
+		{
+			rez = "comment: " + text;
 
+		}
 		return rez + " " + formatTextPos();
 	}
 };
