@@ -83,7 +83,7 @@ struct Token
 			logicor,
 			logicxor,
 			logicNot,
-			lees,
+			less,
 			leesEqual,
 			greater,
 			greaterEqual,
@@ -145,8 +145,6 @@ struct Token
 
 	bool isEmpty() { return type == Types::none && text.empty(); };
 
-	bool stringLiteralClosed = 0;
-
 	union
 	{
 		int i = 0;
@@ -169,26 +167,6 @@ struct Token
 		}
 
 		type = Types::userDefinedWord;
-
-	}
-
-	//can't be empty
-	void parseAsOpperator()
-	{
-		type = Types::op;
-
-		for (int i = 0; i < Token::TypeOpperators::OpperatorsCount; i++)
-		{
-			if (text == Token::opperators[i])
-			{
-				secondaryType = i;
-				return;
-			}
-		}
-
-		type = Types::error;
-
-		text = "Unknown opperator: " + text;
 
 	}
 

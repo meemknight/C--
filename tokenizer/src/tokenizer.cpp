@@ -29,355 +29,253 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		return Token();
 	}
 
-	//TextPosition currentTextPosition;
-	Token currentToken(Token::Types::none);
-	currentToken.begin = textPos;
-	int currentParsingType = 0;
+	Token returnVal;
 
-	enum ParsingTypes
+	auto peek = [&]()
 	{
-		none = 0,
-		word,
-		number,
-		op,
-		stringLiteral,
-		comment,
-	};
-
-	auto parsingNumber = [&]() { return currentParsingType == number; };
-	auto parsingWord = [&]() { return currentParsingType == word; };
-	auto parsingOperator = [&]() { return currentParsingType == op; };
-	auto parsingStringLiteral = [&]() { return currentParsingType == stringLiteral; };
-	auto parsingNone = [&]() { return currentParsingType == none; };
-	auto parsingComment = [&]() { return currentParsingType == comment; };
-
-	auto endCurrentToken = [&]()
-	{
-		if (currentToken.isEmpty()) { return; }
-
-		if (currentToken.type == Token::Types::error)
+		if (begin + 1 < end)
 		{
-			return; //finished
-		}
-		else if (currentToken.type == Token::Types::comment)
-		{
-			return;
-		}
-		else if (currentToken.type == Token::Types::stringLiteral)
-		{
-			if (!currentToken.stringLiteralClosed)
-			{
-				currentToken.type = Token::Types::error; //error parsing string literal, not closed
-				currentToken.text = "Error parsing string iteral not closed.";
-				return; //finished
-			}
-			else
-			{
-				return; //finished
-			}
-		}
-		else if (currentToken.type == Token::Types::number)
-		{
-			currentToken.parseAsNumber();
-			return; //finished
-
-		}
-		else if (currentToken.type == Token::Types::op)
-		{
-			currentToken.parseAsOpperator();
-			return; //finished
-		}
-		else if (currentToken.type == Token::Types::keyWord) //token or user defined
-		{
-			currentToken.parseAsWord();
-			return; //finished
+			return begin[1];
 		}
 		else
 		{
-			currentToken.text = "Compiler internal error";
-			currentToken.type = Token::Types::error;
-			return; //finished
+			return '\0';
 		}
-
-		currentToken = {};
-		currentParsingType = 0;
-
 	};
 
-	auto setOut = [&]()
+	auto increment = [&]() { begin++; return *begin; };
+
+	auto match =[&](char c)
 	{
-		outEnd = begin;
+		if (peek() == c)
+		{
+			increment();
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	};
 
-	for (begin; begin < end; begin++)
+	switch (*begin)
 	{
-		auto performIncrementation = [&]()
-		{
-			if (
-				*begin == '\n'
-				)
-			{
-				textPos.newLine();
-			}
-			else if (*begin != 0 && *begin > 8 && *begin != '\r')
-			{
-				textPos.increment();
-			}
-		};
-	
-		if (*begin == '\v')
-		{
-			currentToken = Token(Token::Types::error, "Vertical tab not supported", {});
-			//performIncrementation();
-			//endCurrentToken();
-			setOut();
-			return currentToken;
-		}
-		else
-		if (parsingStringLiteral())
-		{
-			if (*begin == '"')
-			{
-				currentToken.stringLiteralClosed = true;
-				currentToken.type = Token::Types::stringLiteral;
-				//performIncrementation();
+	case ';':
+		returnVal.type = Token::Types::semicolin;
+		break;
+	case '+':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::plus;
+		break;
+	case '-':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::minus;
+		break;
 
-				begin++; //we have parsed this item
-				performIncrementation();
+	case '*':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::multiplication;
+		break;
 
-				endCurrentToken();
-				setOut();
-				return currentToken;
-			}
-			else if (
-				*begin == '\n'
-				|| *begin == '\v'
-				)
-			{
-				currentToken.type = Token::Types::error; //error parsing string literal, not closed
-				currentToken.text = "Error parsing string iteral not closed.";
-				//performIncrementation();
-				//endCurrentToken();
-				setOut();
-				return currentToken;
-			}
-			else
-			{
-				currentToken.text += *begin;
-			}
-	
-		}
-		else if (parsingComment())
+	case '/':
 		{
-			if (*begin == '\n')
+			if (match('/'))
 			{
-				endCurrentToken();
-				setOut();
-				return currentToken;
-			}
-			else
-			{
-				currentToken.text += *begin;
-			}
-		}
-		else
-		if (isspace(*begin))
-		{
-	
-			//performIncrementation();
-			endCurrentToken();
-			setOut();
-			return currentToken;
-	
-		}
-		else //no more new line possible
-		if (isParanthesis(*begin))
-		{
-			if (currentToken.isEmpty() && parsingNone())
-			{
-				currentToken = Token(Token::Types::parenthesis, *begin, textPos);
-				//performIncrementation();
-				begin++; //we have parsed this item
-				performIncrementation();
-				setOut();
-				return currentToken;
-			}
-			else
-			{
-				//performIncrementation();
-				endCurrentToken();
-				setOut();
-				return currentToken;
-			}
-		}
-		else if (*begin == ';')
-		{
-			if (currentToken.isEmpty() && parsingNone())
-			{
-				currentToken = Token(Token::Types::semicolin, 0, textPos);
-				//performIncrementation();
-				begin++; //we have parsed this item
-				performIncrementation();
-				setOut();
-				return currentToken;
-			}
-			else
-			{
-				//performIncrementation();
-				endCurrentToken();
-				setOut();
-				return currentToken;
-			}
-
-		}
-		else if (isalpha(*begin) || *begin == '_')
-		{
-			if (parsingNumber())
-			{
-				//signal error
-				currentToken.type = Token::Types::error;
-				currentToken.text += *begin;
-				currentToken.text = "Invalid number: " + currentToken.text;
-				setOut();
-				return currentToken;
-			}
-			else if (parsingOperator())
-			{
-				endCurrentToken();
-				setOut();
-				return currentToken;
-
-				//currentToken.type = Token::Types::error;
-				//currentToken.text += *begin;
-				//currentToken.text = "Invalid number: " + currentToken.text;
-				//setOut();
-				//return currentToken;
-			}
-			else
-			{
-				currentParsingType = ParsingTypes::word;
-				currentToken.type = Token::Types::keyWord;
-				currentToken.text += *begin;
-			}
-		}
-		else if (isdigit(*begin))
-		{
-			if (parsingOperator())
-			{
-				endCurrentToken();
-				setOut();
-				return currentToken;
-				//currentParsingType = ParsingTypes::number;
-				//currentToken.type = Token::Types::number;
-				//currentToken.text += input[index];
-			}
-			else if (parsingNone())
-			{
-				currentParsingType = ParsingTypes::number;
-				currentToken.type = Token::Types::number;
-				currentToken.text += *begin;
-			}
-			else if (parsingWord())
-			{
-				currentToken.text += *begin;
-			}
-		}
-		else if (isOperatorSymbol(*begin))
-		{
-			if (*begin == '/')
-			{
-				if (begin < end - 1)
+				//parse comment 
+				while (true)
 				{
-					if (begin[1] == '/')
+					char c = peek();
+					if (c == '\0' || c == '\v' || c == '\n')
 					{
-						if (parsingNone() && currentToken.isEmpty())
-						{
-							currentParsingType = ParsingTypes::comment;
-							currentToken.type = Token::Types::comment;
-						}
-						else
-						{
-							endCurrentToken();
-							setOut();
-							return currentToken;
-						}
+						break;
 					}
-				}
-				
-			}
-
-			if(!parsingComment())
-			if (parsingOperator())
-			{
-				currentToken.text += *begin;
-			}
-			else if (parsingNumber())
-			{
-				if (*begin == '.')
-				{
-					currentToken.text += *begin;
-				}
-				else
-				{
-					endCurrentToken();
-					setOut();
-					return currentToken;
-					//currentParsingType = ParsingTypes::op;
-					//currentToken.type = Token::Types::op;
-					//currentToken.text += input[index];
+					increment();
 				}
 			}
 			else
 			{
-				if (parsingNone() && currentToken.isEmpty())
-				{
-					currentParsingType = ParsingTypes::op;
-					currentToken.type = Token::Types::op;
-					currentToken.text += *begin;
-				}
-				else
-				{
-					endCurrentToken();
-					setOut();
-					return currentToken;
-				}
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::division;
 			}
-	
+		break;
 		}
-		else if (*begin == '"')
+
+	case '%':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::modulo;
+		break;
+
+	case '=':
 		{
-			if (parsingNone() && currentToken.isEmpty())
+			if (match('='))
 			{
-				currentParsingType = ParsingTypes::stringLiteral;
-				currentToken.type = Token::Types::stringLiteral;
-				currentToken.stringLiteralClosed = false;
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::equals;
 			}
 			else
 			{
-				endCurrentToken();
-				setOut();
-				return currentToken;
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::asignment;
 			}
+		break;
 		}
-		else //unknown symbols
-		{
 
-			if (parsingNone() && currentToken.isEmpty())
+	case '!':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::negation;
+		break;
+
+	case '&':
+		{
+			if (match('&'))
 			{
-				currentToken.type = Token::Types::error;
-				currentToken.text = std::string("Error, unexpected character: ") + *begin;
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::and;
 			}
-				
-			endCurrentToken();
-		}		
-	
-		performIncrementation();
+			else
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::logicAnd;
+			}
+			break;
+		}
+
+	case '|':
+		{
+			if (match('|'))
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::or;
+			}
+			else
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::logicor;
+			}
+			break;
+		}
+
+	case '^':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::logicxor;
+		break;
+
+	case '~':
+		returnVal.type = Token::Types::op;
+		returnVal.secondaryType = Token::TypeOpperators::logicNot;
+		break;
+
+	case '<':
+		{
+			if (match('='))
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::leesEqual;
+			}
+			else
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::less;
+			}
+			break;
+		}
+
+	case '>':
+		{
+			if (match('='))
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::greaterEqual;
+			}
+			else
+			{
+				returnVal.type = Token::Types::op;
+				returnVal.secondaryType = Token::TypeOpperators::greater;
+			}
+			break;
+		}
+
+	case '"':
+		{
+			//parse tring literal
+			returnVal.type = Token::Types::stringLiteral;
+
+			while (true)
+			{
+				char c = peek();
+				if (c == '\0' || c == '\v' || c == '\n')
+				{
+					returnVal.type = Token::Types::error;
+					returnVal.text = "Error: string literal not closed";
+					break;
+				}else
+				if (c == '"')
+				{
+					increment();
+					//found the string literal
+					break;
+				}
+				else
+				{
+					increment();
+					returnVal.text += c;
+				}
+			}
+
+			break;
+		}
+
+	default:
+		{
+			
+			if (isParanthesis(*begin))
+			{
+				returnVal.type = Token::Types::parenthesis;
+				returnVal.text = *begin;
+			}else if (isdigit(*begin))
+			{
+				returnVal.type = Token::Types::number;
+				char c = *begin;
+				returnVal.text += c;
+				c = peek();
+				while (isdigit(c) || c == '.')
+				{
+					increment();
+					returnVal.text += c;
+					c = peek();
+				}
+
+				returnVal.parseAsNumber();
+			}
+			else if (isalpha(*begin) || *begin == '_')
+			{
+				returnVal.type = Token::Types::keyWord;
+				char c = *begin;
+				returnVal.text += c;
+				c = peek();
+
+				while (isalnum(c) || c == '_')
+				{
+					increment();
+					returnVal.text += c;
+					c = peek();
+				}
+
+				returnVal.parseAsWord();
+			}
+			else
+			{
+				returnVal.type = Token::Types::error;
+				returnVal.text = "Error: unexpected character: " + *begin;
+			}
+			
+			break;
+		}
+
 	}
-	
 
-	endCurrentToken();
-
-	return currentToken;
+	outEnd = begin+1;
+	return returnVal;
 
 }
 
