@@ -359,6 +359,17 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 				return currentToken;
 			}
 		}
+		else //unknown symbols
+		{
+
+			if (parsingNone() && currentToken.isEmpty())
+			{
+				currentToken.type = Token::Types::error;
+				currentToken.text = std::string("Error, unexpected character: ") + *begin;
+			}
+				
+			endCurrentToken();
+		}		
 	
 		performIncrementation();
 	}
