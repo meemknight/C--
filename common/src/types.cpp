@@ -7,7 +7,7 @@ bool isParanthesis(char c)
 	return findChar(paranthesis, c);
 }
 
-static const char *operatorsSymbols = ".,+-*&|^%=!/~";
+static const char *operatorsSymbols = ".,+-*&|^%=!/~<>";
 
 bool isOperatorSymbol(char c)
 {

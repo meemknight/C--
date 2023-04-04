@@ -83,6 +83,10 @@ struct Token
 			logicor,
 			logicxor,
 			logicNot,
+			lees,
+			leesEqual,
+			greater,
+			greaterEqual,
 			OpperatorsCount
 		};
 	};
@@ -103,6 +107,10 @@ struct Token
 		"|",
 		"^",
 		"~",
+		"<",
+		"<=",
+		">",
+		">=",
 	};
 
 	struct KeyWords
