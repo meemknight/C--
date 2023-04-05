@@ -347,6 +347,8 @@ struct Parser
 			if (!err.empty()) { return {}; }
 
 			Expression right = unary();
+			if (!err.empty()) { return {}; }
+			if (right.token.type == 0) { err = "Parser error: expected an unary token"; }
 
 			*op.right = right;
 			return op;
@@ -371,6 +373,8 @@ struct Parser
 			if (!err.empty()) { return {}; }
 
 			Expression right = unary();
+			if (!err.empty()) { return {}; }
+			if (right.token.type == 0) { err = "Parser error: expected an unary token"; }
 
 			*op.left = left;
 			*op.right = right;
@@ -394,6 +398,9 @@ struct Parser
 			if (!err.empty()) { return {}; }
 
 			Expression right = factor();
+			if (!err.empty()) { return {}; }
+			if (right.token.type == 0) { err = "Parser error: expected a factor token"; }
+
 
 			*op.left = left;
 			*op.right = right;
@@ -417,8 +424,9 @@ struct Parser
 		{
 			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
 			if (!err.empty()) { return {}; }
-
 			Expression right = term();
+			if (!err.empty()) { return {}; }
+			if (right.token.type == 0) { err = "Parser error: expected a termen token"; }
 
 			*op.left = left;
 			*op.right = right;
@@ -443,6 +451,9 @@ struct Parser
 			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
 			if (!err.empty()) { return {}; }
 			Expression right = comparison();
+			if (!err.empty()) { return {}; }
+			
+			if (right.token.type == 0) { err = "Parser error: expected a comparison token"; }
 
 			*op.left = left;
 			*op.right = right;
@@ -489,7 +500,14 @@ void parse(std::vector<Token> &tokens)
 
 	auto rez = parser.expression();
 
-	std::cout << rez.format() << "\n";
+	if (!parser.err.empty())
+	{
+		std::cout << parser.err << "\n";
+	}
+	else
+	{
+		std::cout << rez.format() << "\n";
+	}
 
 
 	std::cin.get();
