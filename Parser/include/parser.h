@@ -125,15 +125,13 @@ Expression grammar:
 
 
 	EXPRESSION = 
-					intLiteral |
-
-					string literal |
+					intLiteral | string literal | booleanLiteral | 
 
 					identifier |
 
 					( + EXPRESSION + ) |
 
-					identifier + ( + FUNCTION_PARAMETERS + ) |   //function call expression, for now you can only pass identifiers
+					identifier + ( + FUNCTION_PARAMETERS + ) |   //function call expression, for now you can only pass identifiers, might promote to statement?
 
 					EXPRESSION + BINARY_OPPERATOR + EXPRESSION | 
 
@@ -147,6 +145,20 @@ Expression grammar:
 	BINARY_OPPERATOR =	 = + - * / % == && & || | ^ < <= > >=
 
 	UNARY_OPPERATOR = ! ~ -
+
+
+//the gramar with no ambiguity
+
+	expression     -> equality ;
+	equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
+																	//todo add && here and the family
+	comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+	term           -> factor ( ( "-" | "+" ) factor )* ;
+	factor         -> unary ( ( "/" | "*" | "%" ) unary )* ;
+	unary          -> ( "!" | "-" | "~" ) unary | primary ;
+	primary        -> NUMBER | STRING | "true" | "false"
+				   | "(" expression ")" ;
+
 
 */
 
@@ -252,6 +264,198 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 }
 
 
+struct Parser
+{
+
+	std::vector<Token> *tokens = 0;
+	int position = 0;
+	FreeListAllocator *allocator = 0;
+	std::string err = "";
+
+
+	bool match(Token t)
+	{
+		if (isAtEnd()) { return 0; }
+		
+		bool rez = t.type == tokens->at(position).type && t.secondaryType == tokens->at(position).secondaryType;
+		
+		if (rez)position++;
+		
+		return rez;
+	}
+
+	bool isAtEnd() { return position >= tokens->size(); }
+
+	Token previous()
+	{
+		return tokens->at(position - 1);
+	}
+
+	Expression primary()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (
+			match(Token(Token::Types::number, Token::TypeNumber::int32)) ||
+			match(Token(Token::Types::number, Token::TypeNumber::real32)) ||
+			match(Token(Token::Types::number, Token::TypeNumber::boolean)) ||
+			match(Token(Token::Types::stringLiteral, 0))
+			)
+		{
+			return createExpressionFromSingleToken(previous(), *allocator, err);
+		}
+		
+		if (match(Token(Token::Types::parenthesis, '(')))
+		{
+			Expression root = createExpressionFromSingleToken(previous(), *allocator, err);
+
+			Expression exp = expression();
+			if (!err.empty()) { return {}; }
+
+			if (match(Token(Token::Types::parenthesis, ')')))
+			{
+				*root.left = exp; 
+			}
+			else
+			{
+				err = "Parser Error: Expected ')'";
+				return {};
+			}
+
+		}
+
+		return {}; //?
+	}
+
+	Expression unary()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (
+			match(Token(Token::Types::op, Token::TypeOpperators::negation)) ||
+			match(Token(Token::Types::op, Token::TypeOpperators::minus)) ||
+			match(Token(Token::Types::op, Token::TypeOpperators::logicNot)))
+		{
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			Expression right = unary();
+
+			*op.right = right;
+			return op;
+		}
+		else
+		{
+			return primary();
+		}
+	}
+
+	Expression factor()
+	{
+		if (!err.empty()) { return {}; }
+		Expression left = unary();
+
+		while (match(Token(Token::Types::op, Token::TypeOpperators::multiplication))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::division))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::modulo))
+			)
+		{
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			Expression right = unary();
+
+			*op.left = left;
+			*op.right = right;
+			left = op;
+		}
+
+		return left;
+
+	}
+
+	Expression term()
+	{
+		if (!err.empty()) { return {}; }
+		Expression left = factor();
+
+		while (match(Token(Token::Types::op, Token::TypeOpperators::plus))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::minus))
+			)
+		{
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			Expression right = factor();
+
+			*op.left = left;
+			*op.right = right;
+			left = op;
+		}
+
+		return left;
+
+	}
+
+	Expression comparison()
+	{
+		if (!err.empty()) { return {}; }
+		Expression left = term();
+
+		while (match(Token(Token::Types::op, Token::TypeOpperators::greater))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::greaterEqual))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::less))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::leesEqual))
+			)
+		{
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			Expression right = term();
+
+			*op.left = left;
+			*op.right = right;
+
+			left = op;
+		}
+
+		return left;
+	}
+
+	Expression equality()
+	{
+		if (!err.empty()) { return {}; }
+		
+		Expression left = comparison();
+
+		while (match(Token(Token::Types::op, Token::TypeOpperators::equals))
+			|| match(Token(Token::Types::op, Token::TypeOpperators::notEquals))
+			)
+		{
+			
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+			Expression right = comparison();
+
+			*op.left = left;
+			*op.right = right;
+
+			left = op;
+		}
+
+		return left;
+	}
+
+	Expression expression()
+	{
+		return equality();
+	}
+
+};
+
+
+
+
 void parse(std::vector<Token> &tokens)
 {
 
@@ -260,17 +464,26 @@ void parse(std::vector<Token> &tokens)
 	
 
 	// ( 1 + 2 )
-	std::string errors = "";
-	Expression expression = createExpressionFromSingleToken(tokenize("(")[0], allocator, errors);
-
-
-	*expression.left = createExpressionFromSingleToken(tokenize("+")[0], allocator, errors);
-	*expression.left->left = createExpressionFromSingleToken(tokenize("1")[0], allocator, errors);
-	*expression.left->right = createExpressionFromSingleToken(tokenize("2")[0], allocator, errors);
-
+	//std::string errors = "";
+	//Expression expression = createExpressionFromSingleToken(tokenize("(")[0], allocator, errors);
 	//
+	//
+	//*expression.left = createExpressionFromSingleToken(tokenize("+")[0], allocator, errors);
+	//*expression.left->left = createExpressionFromSingleToken(tokenize("1")[0], allocator, errors);
+	//*expression.left->right = createExpressionFromSingleToken(tokenize("2")[0], allocator, errors);
+	////
+	//std::cout << expression.format() << "\n";
 
-	std::cout << expression.format() << "\n";
+
+	Parser parser;
+	parser.allocator = &allocator;
+	parser.tokens = &tokens;
+
+
+	auto rez = parser.expression();
+
+	std::cout << rez.format() << "\n";
+
 
 	std::cin.get();
 }

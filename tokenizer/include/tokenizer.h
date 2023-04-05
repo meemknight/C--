@@ -34,6 +34,9 @@ struct Token
 	Token() {};
 	Token(int type):type(type) {};
 
+	Token(int type, int secondaryType):type(type), secondaryType(secondaryType) {};
+
+
 	Token(int type, char c, TextPosition pos):type(type) { text = c; begin = pos; };
 	Token(int type, std::string_view v, TextPosition begin):type(type)
 	{
@@ -80,6 +83,7 @@ struct Token
 			modulo,
 			asignment,
 			equals,
+			notEquals,
 			negation,
 			and,
 			or ,
@@ -104,6 +108,7 @@ struct Token
 		"%",
 		"=",
 		"==",
+		"!=",
 		"!",
 		"&&",
 		"||",
@@ -316,12 +321,15 @@ struct Token
 		else if (type == Types::op) { rez = "Opperator: " + text + " -> " + opperators[secondaryType]; }
 		else if (type == Types::number)
 		{
-			if (secondaryType != TypeNumber::int32 && secondaryType != TypeNumber::real32)
+			if (secondaryType != TypeNumber::int32 && secondaryType != TypeNumber::real32 && secondaryType != TypeNumber::boolean)
 			{
 				rez = "internal error" + std::to_string(__LINE__);
 			}
-			rez = (secondaryType == TypeNumber::int32 ? "Int32: " : "Float: ") +
-				(secondaryType == TypeNumber::int32 ? std::to_string(reprezentation.i) : std::to_string(reprezentation.f));
+
+			if (secondaryType == TypeNumber::int32) { rez = "Int32 " + std::to_string(reprezentation.i); }
+			if (secondaryType == TypeNumber::real32) { rez = "Float " + std::to_string(reprezentation.f); }
+			if (secondaryType == TypeNumber::boolean) { rez = "Bool " + std::to_string(reprezentation.i); }
+
 		}
 		else if (type == Types::keyWord)
 		{
@@ -363,6 +371,7 @@ struct EmptyToken
 		t.type = type;
 		t.secondaryType = secondaryType;
 		memcpy(&t.reprezentation, &reprezentation, sizeof(reprezentation));
+		t.begin = begin;
 
 		if (data)
 		{
