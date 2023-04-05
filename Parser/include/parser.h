@@ -311,10 +311,17 @@ struct Parser
 
 			Expression exp = expression();
 			if (!err.empty()) { return {}; }
+			
+			if(exp.token.type == 0)
+			{
+				err = "Parser Error: Empty ( ) ";
+				return {};
+			}
 
 			if (match(Token(Token::Types::parenthesis, ')')))
 			{
 				*root.left = exp; 
+				return root;
 			}
 			else
 			{

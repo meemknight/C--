@@ -7,7 +7,7 @@ int main()
 
 
 
-	parse(tokenize("1 - 4 * 7 == 5"));
+	parse(tokenize("(1 + 2) <= 10 * 2"));
 
 
 
