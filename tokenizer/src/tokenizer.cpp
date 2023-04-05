@@ -231,6 +231,7 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 			if (isParanthesis(*begin))
 			{
 				returnVal.type = Token::Types::parenthesis;
+				returnVal.secondaryType = *begin;
 				returnVal.text = *begin;
 			}else if (isdigit(*begin))
 			{

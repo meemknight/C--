@@ -17,14 +17,22 @@ add_subdirectory(thirdparty/profilerLib)
 add_subdirectory(thirdparty/glm)
 add_subdirectory(common)
 add_subdirectory(tokenizer)
+add_subdirectory(parser)
 
 
 
 add_executable(tokenizerTest "${CMAKE_CURRENT_SOURCE_DIR}/tokenizerTest/main.cpp")
 target_link_libraries(tokenizerTest PRIVATE profilerLib common tokenizer)
-
 target_compile_definitions(tokenizerTest PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/") # This is useful to get an ASSETS_PATH in your IDE during development but you should comment this if you compile a release version and uncomment the next line
 #target_compile_definitions(tokenizerTest PUBLIC RESOURCES_PATH="./resources/") # Uncomment this line to setup the ASSETS_PATH macro to the final assets directory when you share the game
+
+
+add_executable(parserTest "${CMAKE_CURRENT_SOURCE_DIR}/parserTest/mainParserTest.cpp")
+target_link_libraries(parserTest PRIVATE profilerLib common tokenizer parser)
+target_compile_definitions(parserTest PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/") # This is useful to get an ASSETS_PATH in your IDE during development but you should comment this if you compile a release version and uncomment the next line
+#target_compile_definitions(parserTest PUBLIC RESOURCES_PATH="./resources/") # Uncomment this line to setup the ASSETS_PATH macro to the final assets directory when you share the game
+
+
 
 
 file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/editor/src/*.cpp")
@@ -40,5 +48,5 @@ target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/inc
 target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/include/gameLayer/")
 target_include_directories(editor PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/editor/include/platform/")
 
-target_link_libraries(editor PRIVATE glfw glad glm imgui profilerLib common tokenizer)
+target_link_libraries(editor PRIVATE glfw glad glm imgui profilerLib common tokenizer parser)
 

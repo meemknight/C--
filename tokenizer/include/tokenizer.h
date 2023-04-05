@@ -24,6 +24,9 @@ struct TextPosition
 	}
 };
 
+
+
+
 struct Token
 {
 	TextPosition begin = {};
@@ -61,6 +64,7 @@ struct Token
 			none = 0,
 			int32,
 			real32,
+			boolean,
 		};
 	};
 
@@ -124,6 +128,8 @@ struct Token
 			float_,
 			void_,
 			return_,
+			true_,
+			false_,
 			keyWordsCount
 		};
 	};
@@ -136,6 +142,8 @@ struct Token
 		"float",
 		"void",
 		"return",
+		"true",
+		"false",
 	};
 
 
@@ -162,6 +170,20 @@ struct Token
 			if (text == Token::keyWords[i])
 			{
 				secondaryType = i;
+
+				if (i == Token::KeyWords::true_)
+				{
+					type = Types::number;
+					secondaryType = TypeNumber::boolean;
+					reprezentation.i = 1;
+				}
+				else if (i == Token::KeyWords::false_)
+				{
+					type = Types::number;
+					secondaryType = TypeNumber::boolean;
+					reprezentation.i = 0;
+				}
+
 				return;
 			}
 		}
@@ -238,6 +260,45 @@ struct Token
 	}
 
 	//for printing
+
+	std::string formatSimple()
+	{
+		std::string rez = {};
+		if (type == Types::none)
+		{
+			rez = {};
+		}
+		else if (type == Types::error)
+		{
+			rez = "Error: " + text;
+		}
+		else if (type == Types::parenthesis) { rez = (char)secondaryType; }
+		else if (type == Types::semicolin) { rez = ";"; }
+		else if (type == Types::stringLiteral) { rez = "\"" + text + "\""; }
+		else if (type == Types::op) { rez = opperators[secondaryType]; }
+		else if (type == Types::number)
+		{
+			if (secondaryType != TypeNumber::int32 && secondaryType != TypeNumber::real32)
+			{
+				rez = "internal error" + std::to_string(__LINE__);
+			}
+			rez = (secondaryType == TypeNumber::int32 ? "Int32: " : "Float: ") +
+				(secondaryType == TypeNumber::int32 ? std::to_string(reprezentation.i) : std::to_string(reprezentation.f));
+		}
+		else if (type == Types::keyWord)
+		{
+			rez = keyWords[secondaryType];
+		}
+		else if (type == Types::userDefinedWord) { rez = text; }
+		else if (type == Types::comment)
+		{
+			rez = "comment: " + text;
+
+		}
+		return rez;
+	}
+
+
 	std::string format()
 	{
 		std::string rez = {};
@@ -249,7 +310,7 @@ struct Token
 		{
 			rez = "Error: " + text;
 		}
-		else if (type == Types::parenthesis) { rez = "Parenthesis: " + text; }
+		else if (type == Types::parenthesis) { rez = "Parenthesis: " + (char)secondaryType; }
 		else if (type == Types::semicolin) { rez = "Semicolin [;]"; }
 		else if (type == Types::stringLiteral) { rez = "String Literal: \"" + text + "\""; }
 		else if (type == Types::op) { rez = "Opperator: " + text + " -> " + opperators[secondaryType]; }
@@ -275,6 +336,43 @@ struct Token
 		return rez + " " + formatTextPos();
 	}
 };
+
+//a token without the string, just plain old data
+struct EmptyToken
+{
+	TextPosition begin = {};
+	
+	int type = 0;
+	int secondaryType = 0;
+
+	union
+	{
+		int i = 0;
+		float f;
+	}reprezentation;
+
+	std::string format()
+	{
+		Token t = toToken(0);
+		return t.format();
+	}
+
+	Token toToken(const char *data)
+	{
+		Token t;
+		t.type = type;
+		t.secondaryType = secondaryType;
+		memcpy(&t.reprezentation, &reprezentation, sizeof(reprezentation));
+
+		if (data)
+		{
+			t.text = data;
+		}
+
+		return t;
+	}
+};
+
 
 Token tokenize(const char *begin, const char *end, const char *&outBegin, const char *&outEnd, TextPosition &t);
 
