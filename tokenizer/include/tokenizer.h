@@ -162,6 +162,7 @@ struct Token
 	{
 		int i = 0;
 		float f;
+		char *notUsed;
 	}reprezentation;
 
 	//can't be empty
@@ -357,6 +358,7 @@ struct EmptyToken
 	{
 		int i = 0;
 		float f;
+		char *notUsed;
 	}reprezentation;
 
 	std::string format()

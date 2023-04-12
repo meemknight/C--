@@ -7,7 +7,7 @@ int main()
 
 
 
-	parse(tokenize("(1 + 2) "));
+	parse(tokenize("(1 + 2) (1+3)"));
 
 
 
