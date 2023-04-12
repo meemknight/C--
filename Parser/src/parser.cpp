@@ -45,6 +45,10 @@ void parse(std::vector<Token> &tokens)
 //a type b,  for example a + b
 Value performComputation(int type, Value a, Value b, std::string &err)
 {
+
+	(10 + 1.f + true);
+
+
 	switch (type)
 	{
 	case Token::TypeOpperators::plus:
@@ -56,7 +60,7 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::equals:
 	case Token::TypeOpperators::and:
 	case Token::TypeOpperators::or:
-	case Token::TypeOpperators::logicAnd:
+	case Token::TypeOpperators::logicAnd: //not for floats, just bool to bool or int to int
 	case Token::TypeOpperators::logicor:
 	case Token::TypeOpperators::logicxor:
 	case Token::TypeOpperators::less:
@@ -73,12 +77,21 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 //type b,   for example - b
 Value performComputation(int type, Value a, std::string &err)
 {
+
 	switch (type)
 	{
 	case Token::TypeOpperators::minus:
-	case Token::TypeOpperators::logicNot:
-	case Token::TypeOpperators::negation:
 
+	break;
+	case Token::TypeOpperators::logicNot: //biti
+
+
+	break;
+	case Token::TypeOpperators::negation: //!(bool)
+		if (!a.toBool()) { err = "Couldn't convert opperator to bool."; return {}; };
+		a.reprezentation.i = !(bool)a.reprezentation.i;
+		return a;
+	break;
 	default:
 	err = "Internal evaluator error, not a single opperand"; return {};
 	break;

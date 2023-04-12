@@ -389,14 +389,43 @@ struct Value
 	bool isBool() { return type == boolean; }
 	bool isInt32() { return type == int32; }
 	bool isReal32() { return type == real32; }
-	bool isString32() { return type == string; }
+	bool isString() { return type == string; }
 	bool isNone() { return type == 0 || type > string; }
 
 	bool toBool()
 	{
-		if (isNone()) { return 0; }
+		if (isNone() || isString()) { return 0; }
 		
+		if (isBool()) { return 1; }
+		else if(isReal32())
+		{
+			type = boolean;
+			reprezentation.i = (bool)reprezentation.f;
+			return 1;
+		}
+		else if (isInt32())
+		{
+			type = boolean;
+			reprezentation.i = (bool)reprezentation.i;
+			return 1;
+		}
+		else
+		{
+			assert(0);
+			return 0;
+		}
 	}
+
+	bool toInt32()
+	{
+
+	}
+
+	bool toReal32()
+	{
+
+	}
+
 
 	char type = 0;
 
