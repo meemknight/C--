@@ -172,6 +172,7 @@ struct Parser
 			match(Token(Token::Types::op, Token::TypeOpperators::logicNot)))
 		{
 			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+			op.left = nullptr; //we don't want to anything here
 			if (!err.empty()) { return {}; }
 
 			Expression right = unary();
