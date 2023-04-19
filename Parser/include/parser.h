@@ -10,76 +10,12 @@
 //paranthases expressions have a single left child
 struct Expression
 {
-	EmptyToken token;
-	Expression *left;
-	Expression *right;
-	char *tokenString;
+	EmptyToken token = {};
+	Expression *left=0;
+	Expression *right=0;
+	char *tokenString=0;
 
 	std::string format();
-};
-
-std::string Expression::format()
-{
-	
-	if (left || right)
-	{
-		if (token.type == Token::Types::parenthesis)
-		{
-			std::string rez;
-			if (token.secondaryType == '(')
-			{
-				rez = "( ";
-				std::string r = left->format();
-				rez += r;
-				rez += ")";
-			}else
-			if (token.secondaryType == '{')
-			{
-				rez = "{ ";
-				rez += left->format();
-				rez += "}";
-			}
-			else
-			if (token.secondaryType == '[')
-			{
-				rez = "[ ";
-				rez += left->format();
-				rez += "]";
-			}
-			else
-			{
-				return "internal error in expression::format at paranthase";
-			}
-
-			return rez;
-		}
-		else
-		{
-			std::string rez = "";
-			if (left)
-			{
-				rez += left->format() + " ";
-			}
-
-			Token t = token.toToken(tokenString);
-			rez += t.formatSimple();
-
-			if (right)
-			{
-				rez += " " + right->format();
-			}			
-
-			return rez;
-		}
-
-	}
-	else
-	{
-		//simple expression
-		Token t = token.toToken(tokenString);
-		return t.formatSimple();
-	}
-
 };
 
 
@@ -386,6 +322,31 @@ struct Value
 		string,
 	};
 
+	std::string formatType()
+	{
+		const char *names[5] = {
+			"none",
+			"int32",
+			"real32",
+			"boolean",
+			"string"
+		};
+		return names[type];
+	}
+
+	std::string format()
+	{
+		std::string rez = formatType() + ": ";
+		if (isNone()) {}else
+		if (isInt32()) {rez += std::to_string(reprezentation.i);}else
+		if (isReal32()) { rez += std::to_string(reprezentation.f); }else
+		if (isString()) { rez += reprezentation.string; }else
+		if (isBool()) { rez += reprezentation.i != 0 ? "True" : "False"; }
+		else { assert(0); }
+
+		return rez;
+	}
+
 	bool isBool() { return type == boolean; }
 	bool isInt32() { return type == int32; }
 	bool isReal32() { return type == real32; }
@@ -418,12 +379,48 @@ struct Value
 
 	bool toInt32()
 	{
-
+		if (isNone() || isString()) { return 0; }
+		if (isInt32()) { return true; }
+		else if (isReal32())
+		{
+			type = int32;
+			reprezentation.i = reprezentation.f;
+			return 1;
+		}
+		else if (isBool())
+		{
+			type = int32;
+			reprezentation.i = (bool)reprezentation.i;
+			return 1;
+		}
+		else
+		{
+			assert(0);
+			return 0;
+		}
 	}
 
 	bool toReal32()
 	{
-
+		if (isNone() || isString()) { return 0; }
+		if (isReal32()) { return true; }
+		else if (isInt32())
+		{
+			type = real32;
+			reprezentation.f = reprezentation.i;
+			return 1;
+		}
+		else if (isBool())
+		{
+			type = real32;
+			reprezentation.f = (bool)reprezentation.i;
+			return 1;
+		}
+		else
+		{
+			assert(0);
+			return 0;
+		}
 	}
 
 
@@ -458,6 +455,7 @@ struct Value
 
 
 Value evaluate(Expression *e, std::string &err);
+void testEvaluate(std::string language);
 
 
 void parse(std::vector<Token> &tokens);

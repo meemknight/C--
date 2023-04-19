@@ -1,5 +1,72 @@
 #include <parser.h>
 
+
+std::string Expression::format()
+{
+
+	if (left || right)
+	{
+		if (token.type == Token::Types::parenthesis)
+		{
+			std::string rez;
+			if (token.secondaryType == '(')
+			{
+				rez = "( ";
+				std::string r = left->format();
+				rez += r;
+				rez += ")";
+			}
+			else
+				if (token.secondaryType == '{')
+				{
+					rez = "{ ";
+					rez += left->format();
+					rez += "}";
+				}
+				else
+					if (token.secondaryType == '[')
+					{
+						rez = "[ ";
+						rez += left->format();
+						rez += "]";
+					}
+					else
+					{
+						return "internal error in expression::format at paranthase";
+					}
+
+			return rez;
+		}
+		else
+		{
+			std::string rez = "";
+			if (left)
+			{
+				rez += left->format() + " ";
+			}
+
+			Token t = token.toToken(tokenString);
+			rez += t.formatSimple();
+
+			if (right)
+			{
+				rez += " " + right->format();
+			}
+
+			return rez;
+		}
+
+	}
+	else
+	{
+		//simple expression
+		Token t = token.toToken(tokenString);
+		return t.formatSimple();
+	}
+
+};
+
+
 void parse(std::vector<Token> &tokens)
 {
 
@@ -41,13 +108,137 @@ void parse(std::vector<Token> &tokens)
 	delete[] allocator.baseMemory;
 }
 
+void testEvaluate(std::string language)
+{
+
+	FreeListAllocator allocator;
+	allocator.init(new unsigned char[MB(100)], MB(100));
+
+	auto tokens = tokenize(language);
+
+	Parser parser;
+	parser.allocator = &allocator;
+	parser.tokens = &tokens;
+
+	auto ast = parser.expression();
+	if (!parser.err.empty()) { std::cout << "parser error: " << parser.err << "\n"; }
+	else
+	{
+		std::string err;
+
+		auto finalRez = evaluate(&ast, err);
+
+		if (!err.empty()) { std::cout << "evaluator error: " << err << "\n"; }
+		else
+		{
+			std::cout << finalRez.format();
+		}
+
+	}
+
+	std::cin.get();
+	delete[] allocator.baseMemory;
+
+}
 
 //a type b,  for example a + b
 Value performComputation(int type, Value a, Value b, std::string &err)
 {
+	if (a.isNone() || b.isNone())
+	{
+		err = "Interpretor internal error: Recieved a none value in perform computation";
+	}
 
-	(10 + 1.f + true);
+	auto mathOpperation = [&](int type, Value &out) -> bool
+	{
+		if (a.isNone() || a.isString() || b.isNone() || b.isString())
+		{
+			err = "mathOpperation works only on int bool real, recieved: " + a.formatType() + " and " + b.formatType();
+			return 0;
+		}
 
+		if (a.isReal32() || b.isReal32()) 
+		{
+			a.toReal32(); b.toReal32(); 
+
+			switch (type)
+			{
+			case Token::TypeOpperators::plus:
+			a.reprezentation.f += b.reprezentation.f;
+			break;
+			case Token::TypeOpperators::minus:
+			a.reprezentation.f -= b.reprezentation.f;
+			break;
+			case Token::TypeOpperators::multiplication:
+			a.reprezentation.f *= b.reprezentation.f;
+			break;
+			case Token::TypeOpperators::division:
+			a.reprezentation.f /= b.reprezentation.f;
+			break;
+			case Token::TypeOpperators::modulo:
+			err = "Module doesn't work on floats.";
+			return 0;
+			break;
+			};
+		
+		}else
+		if (a.isInt32() || b.isInt32()) 
+		{
+			a.toInt32(); b.toInt32(); 
+
+			switch (type)
+			{
+			case Token::TypeOpperators::plus:
+			a.reprezentation.i += b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::minus:
+			a.reprezentation.i -= b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::multiplication:
+			a.reprezentation.i *= b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::division:
+			a.reprezentation.i /= b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::modulo:
+			a.reprezentation.i %= b.reprezentation.i;
+			break;
+			};
+		}
+		else //both bool
+		{
+			assert(a.isBool() && b.isBool()); //"both should be bool at this point"
+
+			if (type == Token::TypeOpperators::division)
+			{
+				err = "Division doesn't work with bools";
+				return 0;
+			}
+
+			switch (type)
+			{
+			case Token::TypeOpperators::plus:
+			a.reprezentation.i += b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::minus:
+			a.reprezentation.i -= b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::multiplication:
+			a.reprezentation.i *= b.reprezentation.i;
+			break;
+			case Token::TypeOpperators::modulo:
+			err = "Module doesn't work on bools.";
+			return 0;
+			break;
+			};
+
+			a.toBool();
+		}
+
+		out = a;
+				
+		return 1;
+	};
 
 	switch (type)
 	{
@@ -56,8 +247,51 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::multiplication:
 	case Token::TypeOpperators::division:
 	case Token::TypeOpperators::modulo:
+	{
+		Value ret = {};
+		if (!mathOpperation(type, ret))
+		{
+			return {};
+		}
+		else
+		{
+			return ret;
+		}
+		break;
+	}
+
 	case Token::TypeOpperators::asignment:
+	{
+
+		if (a.isBool())
+		{
+			if (!b.toBool()) { err = "Could not convert " + b.formatType() + " to bool."; return {}; }
+			a.reprezentation.i = b.reprezentation.i;
+		}else
+		if (a.isInt32())
+		{
+			if (!b.toInt32()) { err = "Could not convert " + b.formatType() + " to int32."; return {}; }
+			a.reprezentation.i = b.reprezentation.i;
+		}else
+		if (a.isReal32())
+		{
+			if (!b.toReal32()) { err = "Could not convert " + b.formatType() + " to real32."; return {}; }
+			a.reprezentation.f = b.reprezentation.f;
+		}
+		else if (a.isString())
+		{
+			err = "Assignment doesn't work on strings"; return {};
+		}
+		else 
+		{ assert(0, "unreachable in parse.cpp assignment"); }
+
+		break;
+	}
+
 	case Token::TypeOpperators::equals:
+
+
+
 	case Token::TypeOpperators::and:
 	case Token::TypeOpperators::or:
 	case Token::TypeOpperators::logicAnd: //not for floats, just bool to bool or int to int
@@ -81,14 +315,42 @@ Value performComputation(int type, Value a, std::string &err)
 	switch (type)
 	{
 	case Token::TypeOpperators::minus:
+		if(a.isInt32() || a.isBool())
+		{
+			a.toInt32();
+			a.reprezentation.i = -a.reprezentation.i;
+			return a;
+		}
+		else if (a.isReal32())
+		{
+			a.reprezentation.f = -a.reprezentation.f;
+			return a;
+		}
+		else
+		{
+			err = "Negation works only on int bool real, recieved: " + a.formatType(); return {};
+		}
 
 	break;
 	case Token::TypeOpperators::logicNot: //biti
-
+		if (a.isInt32())
+		{
+			a.reprezentation.i = ~a.reprezentation.i;
+			return a;
+		}
+		else if (a.isBool())
+		{
+			a.reprezentation.i = !(bool)a.reprezentation.i;
+			return a;
+		}
+		else
+		{
+			err = "Logic not works only on int or bool, recieved: " + a.formatType(); return {};
+		}
 
 	break;
 	case Token::TypeOpperators::negation: //!(bool)
-		if (!a.toBool()) { err = "Couldn't convert opperator to bool."; return {}; };
+		if (!a.toBool()) { err = "Couldn't convert opperator to bool. Recieved: " + a.formatType(); return {}; };
 		a.reprezentation.i = !(bool)a.reprezentation.i;
 		return a;
 	break;

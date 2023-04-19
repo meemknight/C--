@@ -7,9 +7,9 @@ int main()
 
 
 
-	parse(tokenize("(1 + 2) (1+3)"));
+	//parse(tokenize("-2"));
 
-
+	testEvaluate("(true + 2.0) * 2");
 
 	return 0;
 }
