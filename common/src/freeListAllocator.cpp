@@ -95,6 +95,7 @@ void FreeListAllocator::init(void* baseMemory, size_t memorySize)
 	winAssertComment(memorySize > 100, "memory size must be greater than 100 bytes");
 
 	this->baseMemory = (char*)baseMemory;
+	this->initialBaseMemory = baseMemory;
 
 	//move base memory to a 8 byte aligned
 

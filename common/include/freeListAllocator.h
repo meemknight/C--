@@ -50,6 +50,7 @@ struct FreeListAllocatorMutex
 struct FreeListAllocator
 {
 	char* baseMemory = 0;
+	void *initialBaseMemory = 0;
 
 	FreeListAllocator() = default;
 	FreeListAllocator(void* baseMemory, size_t memorySize)

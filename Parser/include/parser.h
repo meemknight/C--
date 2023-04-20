@@ -452,6 +452,36 @@ struct Value
 			return 0;
 		}
 	}
+
+
+	bool equals(Value other, std::string &err);
+	bool notEquals(Value other, std::string &err);
+	bool greater(Value other, std::string &err);
+	bool greaterEqual(Value other, std::string &err);
+	bool smaller(Value other, std::string &err);
+	bool smallerEqual(Value other, std::string &err);
+
+	void matchOpperatorsUnsafe(Value &other)
+	{
+		if (this->isReal32() || other.isReal32())
+		{
+			this->toReal32();
+			other.toReal32();
+		}
+		else if (this->isInt32() || other.isInt32())
+		{
+			this->toInt32();
+			other.toInt32();
+		}else if (this->isBool() && other.isBool())
+		{
+		}
+		else
+		{
+			assert(0); //should not reach here
+		}
+
+	}
+
 };
 
 

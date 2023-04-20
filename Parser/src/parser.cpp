@@ -105,7 +105,7 @@ void parse(std::vector<Token> &tokens)
 
 	std::cin.get();
 
-	delete[] allocator.baseMemory;
+	delete[] allocator.initialBaseMemory;
 }
 
 void testEvaluate(std::string language)
@@ -116,29 +116,117 @@ void testEvaluate(std::string language)
 
 	auto tokens = tokenize(language);
 
-	Parser parser;
-	parser.allocator = &allocator;
-	parser.tokens = &tokens;
-
-	auto ast = parser.expression();
-	if (!parser.err.empty()) { std::cout << "parser error: " << parser.err << "\n"; }
-	else
+	bool goodFlag = 1;
+	for (auto &t : tokens)
 	{
-		std::string err;
+		if (t.type == Token::Types::error)
+		{
+			std::cout << "Tokenizer error: " + t.text << "\n";
+			goodFlag = 0;
+		}
+	}
+	
+	if (goodFlag)
+	{
 
-		auto finalRez = evaluate(&ast, err);
+		Parser parser;
+		parser.allocator = &allocator;
+		parser.tokens = &tokens;
 
-		if (!err.empty()) { std::cout << "evaluator error: " << err << "\n"; }
+		auto ast = parser.expression();
+		if (!parser.err.empty()) { std::cout << "parser error: " << parser.err << "\n"; }
 		else
 		{
-			std::cout << finalRez.format();
+			std::string err;
+
+			auto finalRez = evaluate(&ast, err);
+
+			if (!err.empty()) { std::cout << "evaluator error: " << err << "\n"; }
+			else
+			{
+				std::cout << finalRez.format();
+			}
+
 		}
 
 	}
 
 	std::cin.get();
-	delete[] allocator.baseMemory;
+	delete[] allocator.initialBaseMemory;
 
+}
+
+bool Value::equals(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	
+	auto copy = *this;
+	copy.matchOpperatorsUnsafe(other);
+	
+	if (copy.isBool()) { return (bool)copy.reprezentation.i == (bool)other.reprezentation.i; }else
+	if (copy.isInt32()) { return copy.reprezentation.i == other.reprezentation.i; }else
+	if (copy.isReal32()) { return copy.reprezentation.f == other.reprezentation.f; }else
+	{ assert(0); }
+}
+
+bool Value::notEquals(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	return !equals(other, err);
+}
+
+bool Value::greater(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	
+	auto copy = *this;
+	copy.matchOpperatorsUnsafe(other);
+	
+	if (copy.isBool()) { return (bool)copy.reprezentation.i > (bool)other.reprezentation.i; }else
+	if (copy.isInt32()) { return copy.reprezentation.i > other.reprezentation.i; }else
+	if (copy.isReal32()) { return copy.reprezentation.f > other.reprezentation.f; }else
+	{ assert(0); }
+}
+
+
+bool Value::greaterEqual(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	
+	auto copy = *this;
+	copy.matchOpperatorsUnsafe(other);
+	
+	if (copy.isBool()) { return (bool)copy.reprezentation.i >= (bool)other.reprezentation.i; }else
+	if (copy.isInt32()) { return copy.reprezentation.i >= other.reprezentation.i; }else
+	if (copy.isReal32()) { return copy.reprezentation.f >= other.reprezentation.f; }else
+	{ assert(0); }
+}
+
+
+bool Value::smaller(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	
+	auto copy = *this;
+	copy.matchOpperatorsUnsafe(other);
+	
+	if (copy.isBool()) { return (bool)copy.reprezentation.i < (bool)other.reprezentation.i; }else
+	if (copy.isInt32()) { return copy.reprezentation.i < other.reprezentation.i; }else
+	if (copy.isReal32()) { return copy.reprezentation.f < other.reprezentation.f; }else
+	{ assert(0); }
+}
+
+bool Value::smallerEqual(Value other, std::string &err)
+{
+	if (this->isString() || this->isNone() || other.isString() || other.isNone()) { err = "String or none not allowed."; return 0; }
+	
+	auto copy = *this;
+	copy.matchOpperatorsUnsafe(other);
+	
+	if (copy.isBool()) { return (bool)copy.reprezentation.i <= (bool)other.reprezentation.i; }else
+	if (copy.isInt32()) { return copy.reprezentation.i <= other.reprezentation.i; }else
+	if (copy.isReal32()) { return copy.reprezentation.f <= other.reprezentation.f; }else
+	{ assert(0); }
 }
 
 //a type b,  for example a + b
@@ -289,18 +377,156 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	}
 
 	case Token::TypeOpperators::equals:
-
-
+	{
+		Value rez;
+		rez.type = Value::boolean;
+		rez.reprezentation.i = a.equals(b, err);
+		return rez;
+		break;
+	}
 
 	case Token::TypeOpperators::and:
+	{
+		if (!a.toBool() && b.toBool()) { err = "Boolena opperators don't work on strings or none"; return {}; }
+
+		Value rez;
+		rez.type = Value::boolean;
+		rez.reprezentation.i = (bool)a.reprezentation.i && (bool)b.reprezentation.i;
+		return rez;
+		break;
+	}
 	case Token::TypeOpperators::or:
+	{
+		if (!a.toBool() && b.toBool()) { err = "Boolena opperators don't work on strings or none"; return {}; }
+		Value rez;
+		rez.type = Value::boolean;
+		rez.reprezentation.i = (bool)a.reprezentation.i || (bool)b.reprezentation.i;
+		return rez;
+		break;
+	}
+
 	case Token::TypeOpperators::logicAnd: //not for floats, just bool to bool or int to int
+	{
+		if(a.isReal32() || b.isReal32()) { err = "Logic opperators don't work on floats"; return {}; }
+		
+		if (a.isBool() || b.isBool())
+		{
+			if (!a.toBool() && b.toBool()) { err = "Logic opperators don't work on strings or none"; return {}; }
+
+			Value rez;
+			rez.type = Value::boolean;
+			rez.reprezentation.i = (bool)a.reprezentation.i & (bool)b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else if (a.isInt32() && b.isInt32())
+		{
+			Value rez;
+			rez.type = Value::int32;
+			rez.reprezentation.i = a.reprezentation.i & b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else
+		{
+			err = "Logic opperators work only on ints and bool"; return{};
+		}
+	}
+
+
 	case Token::TypeOpperators::logicor:
+	{
+		if (a.isReal32() || b.isReal32()) { err = "Logic opperators don't work on floats"; return {}; }
+
+		if (a.isBool() || b.isBool())
+		{
+			if (!a.toBool() && b.toBool()) { err = "Logic opperators don't work on strings or none"; return {}; }
+
+			Value rez;
+			rez.type = Value::boolean;
+			rez.reprezentation.i = (bool)a.reprezentation.i | (bool)b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else if (a.isInt32() && b.isInt32())
+		{
+			Value rez;
+			rez.type = Value::int32;
+			rez.reprezentation.i = a.reprezentation.i | b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else
+		{
+			err = "Logic opperators work only on ints and bool"; return{};
+		}
+
+	}
+
 	case Token::TypeOpperators::logicxor:
+	{
+		if (a.isReal32() || b.isReal32()) { err = "Logic opperators don't work on floats"; return {}; }
+
+		if (a.isBool() || b.isBool())
+		{
+			if (!a.toBool() && b.toBool()) { err = "Logic opperators don't work on strings or none"; return {}; }
+
+			Value rez;
+			rez.type = Value::boolean;
+			rez.reprezentation.i = (bool)a.reprezentation.i ^ (bool)b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else if (a.isInt32() && b.isInt32())
+		{
+			Value rez;
+			rez.type = Value::int32;
+			rez.reprezentation.i = a.reprezentation.i ^ b.reprezentation.i;
+			return rez;
+			break;
+		}
+		else
+		{
+			err = "Logic opperators work only on ints and bool"; return{};
+		}
+
+	}
+
 	case Token::TypeOpperators::less:
+	{
+		Value rez;
+		rez.toBool();
+		rez.reprezentation.i = a.smaller(b, err);
+		return rez;
+		break;
+	}
+
 	case Token::TypeOpperators::leesEqual:
+	{
+		Value rez;
+		rez.toBool();
+		rez.reprezentation.i = a.smallerEqual(b, err);
+		return rez;
+		break;
+	}
+
 	case Token::TypeOpperators::greater:
+	{
+		Value rez;
+		rez.toBool();
+		rez.reprezentation.i = a.greater(b, err);
+		return rez;
+		break;
+	}
+
 	case Token::TypeOpperators::greaterEqual:
+	{
+		Value rez;
+		rez.toBool();
+		rez.reprezentation.i = a.greaterEqual(b, err);
+		return rez;
+		break;
+	}
 
 	default:
 		err = "Internal evaluator error, not a double opperand"; return {};
@@ -386,8 +612,13 @@ Value evaluate(Expression *e, std::string &err)
 	}
 	else if (e->token.type == Token::Types::op)
 	{
-
-		if (e->token.secondaryType != Token::TypeOpperators::minus)
+		
+		//unary opperators here
+		if (
+			e->token.secondaryType != Token::TypeOpperators::minus &&
+			e->token.secondaryType != Token::TypeOpperators::logicNot &&
+			e->token.secondaryType != Token::TypeOpperators::negation 
+			)
 		{
 			if (!e->left || !e->right)
 			{
