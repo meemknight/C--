@@ -6,6 +6,12 @@
 #include <freeListAllocator.h>
 #include <string_view>
 
+
+
+
+
+
+
 //we consider paranthases as unary expressions, and we'll keep the token set to paranthases and secondary type == '(' or '[' or '{',
 //paranthases expressions have a single left child
 struct Expression
@@ -23,33 +29,44 @@ void allocateMemoryForTheExpression(Expression &e, FreeListAllocator &allocator,
 	std::string_view string);
 
 
+struct Statement
+{
+	EmptyToken token = {};
+	
+	int statementsCount = 0;
+	int expressionsCount = 0;
+
+	Statement *statements = 0; //the last expression is the next
+	Expression *expressions = 0; 
+
+};
+
+void allocateMemoryForTheStatement(Statement &e, FreeListAllocator &allocator,
+	int statementsCount, int expressionsCount);
+
+
+
+//
+/*
+Statement grammar
+
+	program		-> statement* EOF 
+
+	statement	-> printStatement
+
+	printStatement -> "print" "(" expression ")" ";"
+
+
+*/
+
+
+
+
+
 //an expression is something like a + 10, string literals, etc
 
 /*
 Expression grammar:
-
-
-	EXPRESSION = 
-					intLiteral | string literal | booleanLiteral | 
-
-					identifier |
-
-					( + EXPRESSION + ) |
-
-					identifier + ( + FUNCTION_PARAMETERS + ) |   //function call expression, for now you can only pass identifiers, might promote to statement?
-
-					EXPRESSION + BINARY_OPPERATOR + EXPRESSION | 
-
-					UNARY_OPPERATOR + EXPRESSION
-
-
-
-
-	FUNCTION_PARAMETERS = EXPRESSION + (, + EXPRESSION)* | LAMBDA
-
-	BINARY_OPPERATOR =	 = + - * / % == && & || | ^ < <= > >=
-
-	UNARY_OPPERATOR = ! ~ -
 
 
 //the gramar with no ambiguity
@@ -101,6 +118,13 @@ struct Parser
 		
 		if (rez)position++;
 		
+		return rez;
+	}
+
+	bool consume(Token t)
+	{
+		bool rez = match(t);
+		if (!rez) err = "Expected: " + t.formatSimple();
 		return rez;
 	}
 
@@ -303,6 +327,71 @@ struct Parser
 		return equality();
 	}
 
+	//
+	Statement program()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (match(Token(Token::Types::eof))) { return {}; }
+
+		Statement ret = statement();
+		if (!err.empty()) { return {}; }
+		Statement *currentS = &ret;
+		ret.statements[ret.statementsCount - 1] = Statement{};
+
+		if (!err.empty()) { return {}; }
+
+		while (true)
+		{
+			if (match(Token(Token::Types::eof)))
+			{
+				return ret;
+			}
+			else
+			{
+				Statement nextS = statement();
+				if (!err.empty()) { return {}; }
+				currentS->statements[currentS->statementsCount - 1] = nextS;
+				currentS = &currentS->statements[currentS->statementsCount - 1];
+				currentS->statements[currentS->statementsCount - 1] = Statement{};
+
+			}
+		}
+
+	
+
+	}
+
+	Statement statement()
+	{
+		if (!err.empty()) { return {}; }
+		return printStatement();
+
+	}
+
+	Statement printStatement()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (!consume(Token(Token::Types::keyWord, Token::KeyWords::print))) { return {}; }
+		if (!consume(Token(Token::Types::parenthesis, '('))) { return {}; }
+
+		auto expressionRez = expression(); if (!err.empty()) { return {}; }
+		
+		Statement rezult;
+		allocateMemoryForTheStatement(rezult, *allocator, 1, 1);
+
+		rezult.token.type = Token::Types::keyWord;
+		rezult.token.secondaryType = Token::KeyWords::print;
+		rezult.expressions[0] = expressionRez;
+
+		if (!consume(Token(Token::Types::parenthesis, ')'))) { return {}; }
+		if (!consume(Token(Token::Types::semicolin))) { return {}; }
+
+		return rezult;
+	}
+
+
 };
 
 struct Value
@@ -485,7 +574,7 @@ struct Value
 };
 
 
-Value evaluate(Expression *e, std::string &err);
+Value evaluateExpression(Expression *e, std::string &err);
 void testEvaluate(std::string language);
 
 

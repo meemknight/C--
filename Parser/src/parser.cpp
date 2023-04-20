@@ -139,7 +139,7 @@ void testEvaluate(std::string language)
 		{
 			std::string err;
 
-			auto finalRez = evaluate(&ast, err);
+			auto finalRez = evaluateExpression(&ast, err);
 
 			if (!err.empty()) { std::cout << "evaluator error: " << err << "\n"; }
 			else
@@ -586,7 +586,7 @@ Value performComputation(int type, Value a, std::string &err)
 	}
 }
 
-Value evaluate(Expression *e, std::string &err)
+Value evaluateExpression(Expression *e, std::string &err)
 {
 
 	if (!err.empty()) { return {}; }
@@ -608,7 +608,7 @@ Value evaluate(Expression *e, std::string &err)
 	{
 		if(e->token.secondaryType != '(') { err = "Internal evaluator error expected '('"; return {}; }
 		if (!e->left) { err = "Internal evaluator error parenthesis"; return {}; }
-		return evaluate(e->left, err);
+		return evaluateExpression(e->left, err);
 	}
 	else if (e->token.type == Token::Types::op)
 	{
@@ -638,7 +638,7 @@ Value evaluate(Expression *e, std::string &err)
 				err = "Internal evaluator error, at opperator, missing left pointer."; return {};
 			}
 
-			auto rightVal = evaluate(e->right, err);
+			auto rightVal = evaluateExpression(e->right, err);
 			if (!err.empty()) { return {}; }
 
 			auto rez = performComputation(e->token.secondaryType, rightVal, err);
@@ -648,10 +648,10 @@ Value evaluate(Expression *e, std::string &err)
 		}
 		else
 		{
-			auto leftVal = evaluate(e->left, err);
+			auto leftVal = evaluateExpression(e->left, err);
 			if (!err.empty()) { return {}; }
 
-			auto rightVal = evaluate(e->right, err);
+			auto rightVal = evaluateExpression(e->right, err);
 			if (!err.empty()) { return {}; }
 
 			auto rez = performComputation(e->token.secondaryType,leftVal, rightVal, err);
@@ -775,6 +775,29 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 	return returnVal;
 }
 
+
+
+void allocateMemoryForTheStatement(Statement &e, FreeListAllocator &allocator, 
+	int statementsCount, int expressionsCount)
+{
+	
+
+	if (!statementsCount && !expressionsCount)
+	{
+		//don't allocate
+	}
+	else
+	{
+
+		e.statementsCount = statementsCount;
+		e.statements = (Statement *)allocator.allocate(statementsCount * sizeof(Statement));
+
+		e.expressionsCount = expressionsCount;
+		e.expressions = (Expression *)allocator.allocate(statementsCount * sizeof(Expression));
+		
+	}
+
+}
 
 void allocateMemoryForTheExpression(Expression &e, FreeListAllocator &allocator, bool allocateLeftExpression, bool allocateRightExpresiion,
 	std::string_view string)

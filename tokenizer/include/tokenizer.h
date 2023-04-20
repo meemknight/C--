@@ -56,6 +56,7 @@ struct Token
 			number,
 			keyWord,
 			userDefinedWord,
+			eof,
 			comment,
 		};
 	};
@@ -135,6 +136,7 @@ struct Token
 			return_,
 			true_,
 			false_,
+			print,
 			keyWordsCount
 		};
 	};
@@ -149,6 +151,7 @@ struct Token
 		"return",
 		"true",
 		"false",
+		"print",
 	};
 
 
