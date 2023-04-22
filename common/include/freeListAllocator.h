@@ -60,7 +60,8 @@ struct FreeListAllocator
 
 	void init(void* baseMemory, size_t memorySize);
 
-	void* allocate(size_t size);
+	void *allocate(size_t size);
+	void* callocate(size_t size);
 
 	void free(void* mem);
 

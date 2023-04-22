@@ -138,8 +138,8 @@ void testEvaluate(std::string language)
 		else
 		{
 			std::string err;
-
-			auto finalRez = evaluateExpression(&ast, err);
+			Variables stub;
+			auto finalRez = evaluateExpression(&ast, err, stub);
 
 			if (!err.empty()) { std::cout << "evaluator error: " << err << "\n"; }
 			else
@@ -586,7 +586,7 @@ Value performComputation(int type, Value a, std::string &err)
 	}
 }
 
-Value evaluateExpression(Expression *e, std::string &err)
+Value evaluateExpression(Expression *e, std::string &err, Variables &vars)
 {
 
 	if (!err.empty()) { return {}; }
@@ -604,11 +604,19 @@ Value evaluateExpression(Expression *e, std::string &err)
 
 		return ret;
 	}
+	else if (e->token.type == Token::Types::userDefinedWord)
+	{
+		std::string varName = e->tokenString;
+		auto v = vars.getVariable(varName);
+		if (v == nullptr) { err = "Error: variable not declared: " + varName; return {}; }
+
+		return *v;
+	}
 	else if (e->token.type == Token::Types::parenthesis)
 	{
 		if(e->token.secondaryType != '(') { err = "Internal evaluator error expected '('"; return {}; }
 		if (!e->left) { err = "Internal evaluator error parenthesis"; return {}; }
-		return evaluateExpression(e->left, err);
+		return evaluateExpression(e->left, err, vars);
 	}
 	else if (e->token.type == Token::Types::op)
 	{
@@ -638,7 +646,7 @@ Value evaluateExpression(Expression *e, std::string &err)
 				err = "Internal evaluator error, at opperator, missing left pointer."; return {};
 			}
 
-			auto rightVal = evaluateExpression(e->right, err);
+			auto rightVal = evaluateExpression(e->right, err, vars);
 			if (!err.empty()) { return {}; }
 
 			auto rez = performComputation(e->token.secondaryType, rightVal, err);
@@ -646,12 +654,34 @@ Value evaluateExpression(Expression *e, std::string &err)
 
 			return rez;
 		}
-		else
+		else if (e->token.secondaryType == Token::TypeOpperators::asignment)
 		{
-			auto leftVal = evaluateExpression(e->left, err);
+			if(!e->left->tokenString){ err = "Internal interpretor error: tokenString is nullptr at asignment."; return {}; }
+
+			std::string varName = e->left->tokenString;
+			auto var = vars.getVariable(varName);
+
+			if (!var) { err = "Error: variable not declared (in assignment) " + varName; return {}; }
+
+			auto rez = evaluateExpression(e->right, err, vars);
 			if (!err.empty()) { return {}; }
 
-			auto rightVal = evaluateExpression(e->right, err);
+			bool good = 1;
+
+			if (var->isBool()) { good = rez.toBool(); var->reprezentation.i = rez.reprezentation.i; }
+			if (var->isInt32()) { good = rez.toInt32(); var->reprezentation.i = rez.reprezentation.i; }
+			if (var->isReal32()) { good = rez.toReal32(); var->reprezentation.f = rez.reprezentation.f; }
+
+			if (!good) { err = "Error: can't perform confersion for assignment at variable: " + varName; }
+
+			return rez;
+		}
+		else
+		{
+			auto leftVal = evaluateExpression(e->left, err, vars);
+			if (!err.empty()) { return {}; }
+
+			auto rightVal = evaluateExpression(e->right, err, vars);
 			if (!err.empty()) { return {}; }
 
 			auto rez = performComputation(e->token.secondaryType,leftVal, rightVal, err);
@@ -750,7 +780,6 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 
 	break;
 
-
 	default:
 	assert(0); //we should not get here
 	break;
@@ -765,7 +794,7 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 	assert(0); //we should not get here
 	break;
 	case Token::Types::userDefinedWord:
-	assert(0); //we should not get here
+	allocateMemoryForTheExpression(returnVal, allocator, 0, 0, token.text);
 	break;
 	assert(0); //we should not get here
 	default:
@@ -778,11 +807,11 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 
 
 void allocateMemoryForTheStatement(Statement &e, FreeListAllocator &allocator, 
-	int statementsCount, int expressionsCount)
+	int statementsCount, int expressionsCount, const char *statementText)
 {
 	
 
-	if (!statementsCount && !expressionsCount)
+	if (!statementsCount && !expressionsCount && !statementText)
 	{
 		//don't allocate
 	}
@@ -790,11 +819,18 @@ void allocateMemoryForTheStatement(Statement &e, FreeListAllocator &allocator,
 	{
 
 		e.statementsCount = statementsCount;
-		e.statements = (Statement *)allocator.allocate(statementsCount * sizeof(Statement));
+		e.statements = (Statement *)allocator.callocate(statementsCount * sizeof(Statement));
 
 		e.expressionsCount = expressionsCount;
 		e.expressions = (Expression *)allocator.allocate(statementsCount * sizeof(Expression));
 		
+		if (statementText)
+		{
+			size_t s = strlen(statementText);
+			e.statementText = (char*)allocator.allocate(s);
+			strcpy(e.statementText, statementText);
+		}
+
 	}
 
 }

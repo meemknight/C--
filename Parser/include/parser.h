@@ -5,10 +5,8 @@
 #include <iostream>
 #include <freeListAllocator.h>
 #include <string_view>
-
-
-
-
+#include <unordered_map>
+#include <vector>
 
 
 
@@ -37,24 +35,35 @@ struct Statement
 	int expressionsCount = 0;
 
 	Statement *statements = 0; //the last expression is the next
-	Expression *expressions = 0; 
+	Expression *expressions = 0;
 
+	char *statementText;
 };
 
 void allocateMemoryForTheStatement(Statement &e, FreeListAllocator &allocator,
-	int statementsCount, int expressionsCount);
-
+	int statementsCount, int expressionsCount, const char *statementText = nullptr);
 
 
 //
 /*
 Statement grammar
 
-	program		-> statement* EOF 
+	program		-> block? EOF 
 
-	statement	-> printStatement
+	block		-> "{" declaration* "}"
 
-	printStatement -> "print" "(" expression ")" ";"
+	declaration	-> varDeclaration | statement
+
+	statement	-> printStatement | exprStmt | block
+
+
+	----------------
+
+	varDeclaration	-> TYPE_KEYWORD USER_IDENTIFIER ( "=" expression )? ";"
+
+	exprStmt		-> expression ";"
+
+	printStatement	-> "print" "(" expression ")" ";"
 
 
 */
@@ -71,14 +80,15 @@ Expression grammar:
 
 //the gramar with no ambiguity
 
-	expression     -> equality ;
-	equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
+	expression		-> assignment ;
+	assignment		-> USER_DEFINED_IDENTIRIER "=" assignment | equality
+	equality		-> comparison ( ( "!=" | "==" ) comparison )* ;
 																	//todo add && here and the family
-	comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-	term           -> factor ( ( "-" | "+" ) factor )* ;
-	factor         -> unary ( ( "/" | "*" | "%" ) unary )* ;
-	unary          -> ( "!" | "-" | "~" ) unary | primary ;
-	primary        -> NUMBER | STRING | "true" | "false"
+	comparison		-> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+	term			-> factor ( ( "-" | "+" ) factor )* ;
+	factor			-> unary ( ( "/" | "*" | "%" ) unary )* ;
+	unary			-> ( "!" | "-" | "~" ) unary | primary ;
+	primary			-> NUMBER | STRING | "true" | "false" | USER_DEFINED_IDENTIRIER
 				   | "(" expression ")" ;
 
 
@@ -110,14 +120,24 @@ struct Parser
 		}
 	}
 
-	bool match(Token t)
+	bool peek(Token t)
 	{
 		if (isAtEnd()) { return 0; }
-		
 		bool rez = t.type == tokens->at(position).type && t.secondaryType == tokens->at(position).secondaryType;
-		
+		return rez;
+	}
+
+	bool peek2(Token t)
+	{
+		if (position+1 >= tokens->size()) { return 0; }
+		bool rez = t.type == tokens->at(position+1).type && t.secondaryType == tokens->at(position+1).secondaryType;
+		return rez;
+	}
+
+	bool match(Token t)
+	{
+		bool rez = peek(t);
 		if (rez)position++;
-		
 		return rez;
 	}
 
@@ -150,6 +170,7 @@ struct Parser
 			match(Token(Token::Types::number, Token::TypeNumber::int32)) ||
 			match(Token(Token::Types::number, Token::TypeNumber::real32)) ||
 			match(Token(Token::Types::number, Token::TypeNumber::boolean)) ||
+			match(Token(Token::Types::userDefinedWord)) ||
 			match(Token(Token::Types::stringLiteral, 0))
 			)
 		{
@@ -322,9 +343,43 @@ struct Parser
 		return left;
 	}
 
+	Expression assignment()
+	{
+		//	assignment		-> USER_DEFINED_IDENTIRIER "=" assignment | equality
+		if (!err.empty()) { return {}; }
+
+		if (peek(Token(Token::Types::userDefinedWord))
+			&& peek2(Token(Token::Types::op, Token::TypeOpperators::asignment))
+			)
+		{
+			if (!consume(Token(Token::Types::userDefinedWord))) { return {}; }
+
+			Expression var = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			if (!consume(Token(Token::Types::op, Token::TypeOpperators::asignment))) { return {}; }
+
+			Expression equals = createExpressionFromSingleToken(previous(), *allocator, err);
+			if (!err.empty()) { return {}; }
+
+			*equals.left = var;
+
+			auto right = equality();
+			if (!err.empty()) { return {}; }
+			
+			*equals.right = right;
+
+			return equals;
+		}
+		else
+		{
+			return comparison();
+		}
+	}
+
 	Expression expression()
 	{
-		return equality();
+		return assignment();
 	}
 
 	//
@@ -334,38 +389,145 @@ struct Parser
 
 		if (match(Token(Token::Types::eof))) { return {}; }
 
-		Statement ret = statement();
-		if (!err.empty()) { return {}; }
-		Statement *currentS = &ret;
-		ret.statements[ret.statementsCount - 1] = Statement{};
-
+		Statement rez = block();
 		if (!err.empty()) { return {}; }
 
-		while (true)
+		if (!consume(Token(Token::Types::eof))) { return {}; }
+
+		return rez;
+	}
+	
+	Statement block()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (!consume(Token(Token::Types::parenthesis, '{'))) { return {}; }
+
+		Statement open;
+		allocateMemoryForTheStatement(open, *allocator, 1, 0);
+		open.token.type = Token::Types::parenthesis;
+		open.token.secondaryType = '{';
+
+		Statement *currentStatement = &open;
+
+		while (!match(Token(Token::Types::parenthesis, '}')))
 		{
-			if (match(Token(Token::Types::eof)))
-			{
-				return ret;
-			}
-			else
-			{
-				Statement nextS = statement();
-				if (!err.empty()) { return {}; }
-				currentS->statements[currentS->statementsCount - 1] = nextS;
-				currentS = &currentS->statements[currentS->statementsCount - 1];
-				currentS->statements[currentS->statementsCount - 1] = Statement{};
+			Statement rezult = declaration();
+			if (!err.empty()) { return {}; }
 
-			}
+			currentStatement->statements[currentStatement->statementsCount - 1] = rezult;
+			currentStatement = &currentStatement->statements[currentStatement->statementsCount - 1];
+			//currentStatement->statements[currentStatement->statementsCount - 1] = Statement{};
 		}
 
-	
+		Statement close;
+		allocateMemoryForTheStatement(close, *allocator, 1, 0);
+		close.token.type = Token::Types::parenthesis;
+		close.token.secondaryType = '}';
+		currentStatement->statements[currentStatement->statementsCount - 1] = close;
+
+		return open;
+	}
+
+	Statement declaration()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (
+			peek(Token(Token::Types::keyWord, Token::KeyWords::int32_)) ||
+			peek(Token(Token::Types::keyWord, Token::KeyWords::float_)) ||
+			peek(Token(Token::Types::keyWord, Token::KeyWords::bool_))
+			)
+		{
+			return varDeclaration();
+		}
+		else
+		{
+			return statement();
+		}
+
 
 	}
 
 	Statement statement()
 	{
 		if (!err.empty()) { return {}; }
-		return printStatement();
+
+		if (peek(Token(Token::Types::keyWord, Token::KeyWords::print)))
+		{
+			return printStatement();
+		}
+		else
+		{
+			return exprStmt();
+		}
+
+	}
+
+	Statement varDeclaration()
+	{
+		if (!err.empty()) { return {}; }
+
+		int type = 0;
+		if (match(Token(Token::Types::keyWord, Token::KeyWords::int32_)))
+		{
+			type = Token::TypeNumber::int32;
+		}
+		else if (match(Token(Token::Types::keyWord, Token::KeyWords::float_)))
+		{
+			type = Token::TypeNumber::real32;
+		}
+		else if (match(Token(Token::Types::keyWord, Token::KeyWords::bool_)))
+		{
+			type = Token::TypeNumber::boolean;
+		}
+		else
+		{
+			err = "Internal parser error: expected a var type.";
+			return {};
+		}
+
+		if (!consume(Token(Token::Types::userDefinedWord))) { return {}; }
+
+		std::string varName = previous().text; if (varName.empty()) { err = "Internal parser error: varName is empty"; return {}; }
+		
+		if (match(Token(Token::Types::op, Token::TypeOpperators::asignment)))
+		{
+			Expression expr = expression();
+
+			Statement rezult;
+			allocateMemoryForTheStatement(rezult, *allocator, 1, 1, varName.c_str());
+			rezult.token.type = Token::Types::varDeclaration;
+			rezult.token.secondaryType = type;
+			rezult.expressions[0] = expr;
+			if (!consume(Token(Token::Types::semicolin))) { return {}; }
+			return rezult;
+		}
+		else
+		{
+
+			Statement rezult;
+			allocateMemoryForTheStatement(rezult, *allocator, 1, 0, varName.c_str());
+			rezult.token.type = Token::Types::varDeclaration;
+			rezult.token.secondaryType = type;
+			if (!consume(Token(Token::Types::semicolin))) { return {}; }
+			return rezult;
+		}
+
+	}
+
+	Statement exprStmt()
+	{
+		auto expressionRez = expression(); if (!err.empty()) { return {}; }
+
+		Statement rezult;
+		allocateMemoryForTheStatement(rezult, *allocator, 1, 1);
+		rezult.token.type = Token::Types::expressionStatement;
+		rezult.expressions[0] = expressionRez;
+
+		if (!consume(Token(Token::Types::semicolin))) { return {}; }
+		return rezult;
+
 
 	}
 
@@ -390,6 +552,7 @@ struct Parser
 
 		return rezult;
 	}
+
 
 
 };
@@ -424,15 +587,23 @@ struct Value
 		return names[type];
 	}
 
-	std::string format()
+	std::string formatValue()
 	{
-		std::string rez = formatType() + ": ";
+		std::string rez;
 		if (isNone()) {}else
 		if (isInt32()) {rez += std::to_string(reprezentation.i);}else
 		if (isReal32()) { rez += std::to_string(reprezentation.f); }else
 		if (isString()) { rez += reprezentation.string; }else
 		if (isBool()) { rez += reprezentation.i != 0 ? "True" : "False"; }
 		else { assert(0); }
+		return rez;
+	}
+
+	std::string format()
+	{
+		std::string rez = formatType() + ": ";
+		
+		rez += formatValue();
 
 		return rez;
 	}
@@ -574,7 +745,43 @@ struct Value
 };
 
 
-Value evaluateExpression(Expression *e, std::string &err);
+struct Variables
+{
+	std::unordered_map<std::string, Value> variabels;
+
+	Value *getVariable(std::string name)
+	{
+		auto it = variabels.find(name);
+		if (it == variabels.end()) { return 0; }
+
+		return &it->second;
+	}
+
+	bool addVariable(std::string name, Value v)
+	{
+		auto it = variabels.find(name);
+		if (it == variabels.end()) 
+		{
+			variabels[name] = v;
+			return 1; 
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	void push() {};
+
+	bool pop() 
+	{
+		return 1;
+	};
+};
+
+
+
+Value evaluateExpression(Expression *e, std::string &err, Variables &vars);
 void testEvaluate(std::string language);
 
 

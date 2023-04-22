@@ -56,8 +56,10 @@ struct Token
 			number,
 			keyWord,
 			userDefinedWord,
-			eof,
+			eof, //used in evaluator and parser
 			comment,
+			expressionStatement, //used in evaluator and parser
+			varDeclaration, //used in evaluator and parser
 		};
 	};
 
@@ -132,6 +134,7 @@ struct Token
 			while_,
 			int32_,
 			float_,
+			bool_,
 			void_,
 			return_,
 			true_,
@@ -147,6 +150,7 @@ struct Token
 		"while",
 		"int32",
 		"float",
+		"bool",
 		"void",
 		"return",
 		"true",

@@ -4,8 +4,7 @@
 #include <tokenizer.h>
 #include <parser.h>
 #include <iostream>
-
-
+#include <unordered_map>
 
 
 void exectueFromLanguageString(std::string language)
@@ -17,12 +16,17 @@ void exectueFromLanguageString(std::string language)
 	auto tokens = tokenize(language);
 
 	bool goodFlag = 1;
-	for (auto &t : tokens)
+	for (int i = 0; i < tokens.size(); i++)
 	{
-		if (t.type == Token::Types::error)
+		if (tokens[i].type == Token::Types::error)
 		{
-			std::cout << "Tokenizer error: " + t.text << "\n";
+			std::cout << "Tokenizer error: " + tokens[i].text << "\n";
 			goodFlag = 0;
+		}
+		else if (tokens[i].type == Token::Types::comment)
+		{
+			tokens.erase(tokens.begin() + i);
+			i--;
 		}
 	}
 
@@ -47,7 +51,6 @@ void exectueFromLanguageString(std::string language)
 		}
 	}
 
-	std::cin.get();
 	delete[] allocator.initialBaseMemory;
 
 }
@@ -56,6 +59,9 @@ bool execute(Statement program, std::string &err)
 {
 
 	Statement *currentStatement = &program;
+
+
+	Variables variables;
 
 	while (currentStatement->token.type != 0)
 	{
@@ -75,10 +81,10 @@ bool execute(Statement program, std::string &err)
 						return 0;
 					}
 
-					Value v = evaluateExpression(&currentStatement->expressions[0], err);
+					Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
 					if (!err.empty()) { return 0; }
 
-					std::cout << v.format() << "\n";
+					std::cout << v.formatValue() << "\n";
 					break;
 				}
 
@@ -87,10 +93,100 @@ bool execute(Statement program, std::string &err)
 				currentStatement->token.format();
 			return 0;
 			}
-
-
 		break;
 
+		case Token::Types::expressionStatement:
+		{
+			
+			evaluateExpression(&currentStatement->expressions[0], err, variables);
+			if (!err.empty()) { return 0; }
+			break;
+		}
+		break;
+
+		case Token::Types::varDeclaration:
+		{
+			
+			Value rez;
+
+			std::string varName = currentStatement->statementText;
+
+			if (currentStatement->expressionsCount == 1)
+			{
+				rez = evaluateExpression(&currentStatement->expressions[0], err, variables);
+				if (!err.empty()) { return 0; }
+
+				if (currentStatement->token.secondaryType == Token::TypeNumber::int32)
+				{
+					rez.toInt32();
+				}else
+				if (currentStatement->token.secondaryType == Token::TypeNumber::real32)
+				{
+					rez.toReal32();
+				}else
+				if (currentStatement->token.secondaryType == Token::TypeNumber::boolean)
+				{
+					rez.toBool();
+				}else
+				{
+					err = "Internal evaluator err: unexpected type in var declaration.";
+				}
+			}
+			else if (currentStatement->expressionsCount == 0)
+			{
+				if (currentStatement->token.secondaryType == Token::TypeNumber::int32)
+				{
+					rez.type = Value::int32;
+				}else
+				if (currentStatement->token.secondaryType == Token::TypeNumber::real32)
+				{
+					rez.type = Value::real32;
+				}if (currentStatement->token.secondaryType == Token::TypeNumber::boolean)
+				{
+					rez.type = Value::boolean;
+				}
+				else
+				{
+					err = "Internal evaluator err: unexpected type in var declaration2.";
+				}
+			}
+			else { assert(0); }
+
+
+			if (!variables.addVariable(varName, rez))
+			{
+				err = "Variable already declared: " + varName;
+				return 0;
+			}
+			//std::cout << "declared variable: " << currentStatement->statementText << " = " << v.format() << "\n";
+
+		}
+		break;
+
+		case Token::Types::parenthesis:
+		{
+			if (currentStatement->token.secondaryType == '{')
+			{
+				variables.push();
+			}
+			else if (currentStatement->token.secondaryType == '}')
+			{
+				if (!variables.pop())
+				{
+					err = "Internal compiler error: stack underflow.";
+					return 0;
+				}
+			}
+			else
+			{
+				err = "Internal compiler error: parenthesis type for the statement execution: " +
+					currentStatement->token.format();
+				return 0;
+			}
+
+
+		}
+		break;
 
 		default:
 		err = "Internal compiler error: unexpected token type for the statement execution: " +

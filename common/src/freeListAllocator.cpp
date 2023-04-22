@@ -319,6 +319,14 @@ void* FreeListAllocator::allocate(size_t size)
 	return nullptr;
 }
 
+void *FreeListAllocator::callocate(size_t size)
+{
+	auto rez = allocate(size);
+	if (!rez) { return nullptr; }
+	memset(rez, 0, size);
+	return rez;
+}
+
 void FreeListAllocator::free(void* mem)
 {
 	if (mem == nullptr) { return; }
