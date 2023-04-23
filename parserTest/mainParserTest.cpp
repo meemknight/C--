@@ -16,13 +16,18 @@ int main()
 	//std::cin.get();
 
 	exectueFromLanguageString(
-		"{"
-		"int32 a = 2;"
-		"int32 b = 6;"
-		"a = b - 2;"
-		"print(a + b);"
-		"}"
-	);
+R"#(
+{	
+	int32 a = 2;
+	int32 b = 6;
+	{
+		print("test");
+	}
+	a = b - 2;
+	print(a + b);
+}
+)#"
+);
 
 
 	std::cout << "\n";

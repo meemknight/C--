@@ -81,7 +81,7 @@ Expression grammar:
 //the gramar with no ambiguity
 
 	expression		-> assignment ;
-	assignment		-> USER_DEFINED_IDENTIRIER "=" assignment | equality
+	assignment		-> (USER_DEFINED_IDENTIRIER "=" assignment) | equality
 	equality		-> comparison ( ( "!=" | "==" ) comparison )* ;
 																	//todo add && here and the family
 	comparison		-> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -345,7 +345,7 @@ struct Parser
 
 	Expression assignment()
 	{
-		//	assignment		-> USER_DEFINED_IDENTIRIER "=" assignment | equality
+		//	assignment		-> (USER_DEFINED_IDENTIRIER "=" assignment) | equality
 		if (!err.empty()) { return {}; }
 
 		if (peek(Token(Token::Types::userDefinedWord))
@@ -373,7 +373,7 @@ struct Parser
 		}
 		else
 		{
-			return comparison();
+			return equality();
 		}
 	}
 
@@ -403,30 +403,56 @@ struct Parser
 
 		if (!consume(Token(Token::Types::parenthesis, '{'))) { return {}; }
 
-		Statement open;
-		allocateMemoryForTheStatement(open, *allocator, 1, 0);
-		open.token.type = Token::Types::parenthesis;
-		open.token.secondaryType = '{';
+		Statement rez;
+		rez.token.type = Token::Types::parenthesis;
+		rez.token.secondaryType = '{';
 
-		Statement *currentStatement = &open;
+		allocateMemoryForTheStatement(rez, *allocator, 2, 0);
+
+		if (match(Token(Token::Types::parenthesis, '}')))
+		{
+			return rez;
+		}
+		
+		Statement inside = declaration();
+		rez.statements[0] = inside;
+		Statement *currentStatement = &rez.statements[0];
 
 		while (!match(Token(Token::Types::parenthesis, '}')))
 		{
-			Statement rezult = declaration();
+			inside = declaration();
 			if (!err.empty()) { return {}; }
-
-			currentStatement->statements[currentStatement->statementsCount - 1] = rezult;
+			
+			currentStatement->statements[currentStatement->statementsCount - 1] = inside;
 			currentStatement = &currentStatement->statements[currentStatement->statementsCount - 1];
-			//currentStatement->statements[currentStatement->statementsCount - 1] = Statement{};
 		}
 
-		Statement close;
-		allocateMemoryForTheStatement(close, *allocator, 1, 0);
-		close.token.type = Token::Types::parenthesis;
-		close.token.secondaryType = '}';
-		currentStatement->statements[currentStatement->statementsCount - 1] = close;
+		return rez;
 
-		return open;
+		//Statement open;
+		//allocateMemoryForTheStatement(open, *allocator, 1, 0);
+		//open.token.type = Token::Types::parenthesis;
+		//open.token.secondaryType = '{';
+		//
+		//Statement *currentStatement = &open;
+		//
+		//while (!match(Token(Token::Types::parenthesis, '}')))
+		//{
+		//	Statement rezult = declaration();
+		//	if (!err.empty()) { return {}; }
+		//
+		//	currentStatement->statements[currentStatement->statementsCount - 1] = rezult;
+		//	currentStatement = &currentStatement->statements[currentStatement->statementsCount - 1];
+		//	//currentStatement->statements[currentStatement->statementsCount - 1] = Statement{};
+		//}
+		//
+		//Statement close;
+		//allocateMemoryForTheStatement(close, *allocator, 1, 0);
+		//close.token.type = Token::Types::parenthesis;
+		//close.token.secondaryType = '}';
+		//currentStatement->statements[currentStatement->statementsCount - 1] = close;
+		//
+		//return open;
 	}
 
 	Statement declaration()
@@ -456,12 +482,14 @@ struct Parser
 		if (peek(Token(Token::Types::keyWord, Token::KeyWords::print)))
 		{
 			return printStatement();
+		}else if(peek(Token(Token::Types::parenthesis, '{')))
+		{
+			return block();
 		}
 		else
 		{
 			return exprStmt();
 		}
-
 	}
 
 	Statement varDeclaration()
@@ -747,22 +775,26 @@ struct Value
 
 struct Variables
 {
-	std::unordered_map<std::string, Value> variabels;
+	std::vector<std::unordered_map<std::string, Value>> variabels;
 
 	Value *getVariable(std::string name)
 	{
-		auto it = variabels.find(name);
-		if (it == variabels.end()) { return 0; }
-
-		return &it->second;
+		for (int i = variabels.size() - 1; i >= 0; i--)
+		{
+			auto it = variabels[i].find(name);
+			if (it != variabels[i].end()) { return &it->second; }
+		}
+		return 0;
 	}
 
 	bool addVariable(std::string name, Value v)
 	{
-		auto it = variabels.find(name);
-		if (it == variabels.end()) 
+		if (variabels.empty()) { return 0; }
+
+		auto it = variabels.back().find(name);
+		if (it == variabels.back().end()) 
 		{
-			variabels[name] = v;
+			variabels.back()[name] = v;
 			return 1; 
 		}
 		else
@@ -771,11 +803,22 @@ struct Variables
 		}
 	}
 
-	void push() {};
+	void push() 
+	{
+		variabels.push_back({});
+	};
 
 	bool pop() 
 	{
-		return 1;
+		if (!variabels.empty())
+		{
+			variabels.pop_back();
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
 	};
 };
 

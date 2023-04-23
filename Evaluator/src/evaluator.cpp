@@ -43,8 +43,9 @@ void exectueFromLanguageString(std::string language)
 		if (!parser.err.empty()) { std::cout << "Parser error: " << parser.err << "\n"; }
 		else
 		{
+			Variables variables;
 			std::string err = "";
-			execute(ast, err);
+			execute(ast, err, variables);
 
 			if (!err.empty()) { std::cout << "Runtime error: " << err << "\n"; }
 
@@ -55,13 +56,11 @@ void exectueFromLanguageString(std::string language)
 
 }
 
-bool execute(Statement program, std::string &err)
+bool execute(Statement program, std::string &err, Variables &variables)
 {
 
 	Statement *currentStatement = &program;
 
-
-	Variables variables;
 
 	while (currentStatement->token.type != 0)
 	{
@@ -167,14 +166,26 @@ bool execute(Statement program, std::string &err)
 		{
 			if (currentStatement->token.secondaryType == '{')
 			{
-				variables.push();
-			}
-			else if (currentStatement->token.secondaryType == '}')
-			{
-				if (!variables.pop())
+				if (currentStatement->statements[0].token.type == 0)
 				{
-					err = "Internal compiler error: stack underflow.";
-					return 0;
+					//empty paranthases
+				}
+				else
+				{
+					variables.push();
+
+					auto rez = execute(currentStatement->statements[0], err, variables);
+
+					if (!rez)
+					{
+						return 0;
+					}
+
+					if (!variables.pop())
+					{
+						err = "Internal compiler error: stack underflow.";
+						return 0;
+					}
 				}
 			}
 			else
