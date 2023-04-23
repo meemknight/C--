@@ -18,13 +18,18 @@ int main()
 	exectueFromLanguageString(
 R"#(
 {	
-	int32 a = 2;
-	int32 b = 6;
+	int32 counter = 10;
+	
+	while(counter > 0)
 	{
-		print("test");
+		print(counter);
+		counter = counter - 1;
+	}else
+	{
+		print("executed 0 times");
 	}
-	a = b - 2;
-	print(a + b);
+
+	print("done");
 }
 )#"
 );

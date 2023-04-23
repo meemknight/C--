@@ -54,10 +54,14 @@ Statement grammar
 
 	declaration	-> varDeclaration | statement
 
-	statement	-> printStatement | exprStmt | block
+	statement	-> printStatement | exprStmt | block | ifStmt | whileStmt
 
 
 	----------------
+
+	whileStmt		-> "while" "(" expression ")" statement ( "else" statement )?
+
+	ifStmt			-> "if" "(" expression ")" statement ( "else" statement )?
 
 	varDeclaration	-> TYPE_KEYWORD USER_IDENTIFIER ( "=" expression )? ";"
 
@@ -82,8 +86,9 @@ Expression grammar:
 
 	expression		-> assignment ;
 	assignment		-> (USER_DEFINED_IDENTIRIER "=" assignment) | equality
+																	//todo add && here
+																	//todo add & here ?
 	equality		-> comparison ( ( "!=" | "==" ) comparison )* ;
-																	//todo add && here and the family
 	comparison		-> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 	term			-> factor ( ( "-" | "+" ) factor )* ;
 	factor			-> unary ( ( "/" | "*" | "%" ) unary )* ;
@@ -486,9 +491,102 @@ struct Parser
 		{
 			return block();
 		}
-		else
+		else if (peek(Token(Token::Types::keyWord, Token::KeyWords::if_)))
+		{
+			return ifStmt();
+		}
+		else if (peek(Token(Token::Types::keyWord, Token::KeyWords::while_)))
+		{
+			return whileStmt();
+		}else
 		{
 			return exprStmt();
+		}
+	}
+
+	Statement whileStmt()
+	{
+		if (!err.empty()) { return {}; }
+		if (!consume(Token(Token::Types::keyWord, Token::KeyWords::while_))) { return {}; }
+		if (!consume(Token(Token::Types::parenthesis, '('))) { return {}; }
+
+		Expression expr = expression();
+		if (!err.empty()) { return {}; }
+
+		if (!consume(Token(Token::Types::parenthesis, ')'))) { return {}; }
+
+		Statement block = statement();
+		if (!err.empty()) { return {}; }
+
+		if (match(Token(Token::Types::keyWord, Token::KeyWords::else_)))
+		{
+			Statement ret;
+			allocateMemoryForTheStatement(ret, *allocator, 3, 1);
+			ret.token.type = Token::Types::keyWord;
+			ret.token.secondaryType = Token::KeyWords::while_;
+			ret.expressions[0] = expr;
+			ret.statements[0] = block;
+
+			Statement elseStatement = statement();
+			if (!err.empty()) { return {}; }
+
+			ret.statements[1] = elseStatement;
+
+			return ret;
+		}
+		else
+		{
+			Statement ret;
+			allocateMemoryForTheStatement(ret, *allocator, 2, 1);
+			ret.token.type = Token::Types::keyWord;
+			ret.token.secondaryType = Token::KeyWords::while_;
+			ret.expressions[0] = expr;
+			ret.statements[0] = block;
+
+			return ret;
+		}
+	}
+
+	Statement ifStmt()
+	{
+		if (!err.empty()) { return {}; }
+		if (!consume(Token(Token::Types::keyWord, Token::KeyWords::if_))) { return {}; }
+		if (!consume(Token(Token::Types::parenthesis, '('))) { return {}; }
+
+		Expression expr = expression();
+		if (!err.empty()) { return {}; }
+
+		if (!consume(Token(Token::Types::parenthesis, ')'))) { return {}; }
+
+		Statement firstBlock = statement();
+		if (!err.empty()) { return {}; }
+
+		if (match(Token(Token::Types::keyWord, Token::KeyWords::else_)))
+		{
+			Statement ret;
+			allocateMemoryForTheStatement(ret, *allocator, 3, 1);
+			ret.token.type = Token::Types::keyWord;
+			ret.token.secondaryType = Token::KeyWords::if_;
+			ret.expressions[0] = expr;
+			ret.statements[0] = firstBlock;
+
+			Statement elseStatement = statement();
+			if (!err.empty()) { return {}; }
+
+			ret.statements[1] = elseStatement;
+
+			return ret;
+		}
+		else
+		{
+			Statement ret;
+			allocateMemoryForTheStatement(ret, *allocator, 2, 1);
+			ret.token.type = Token::Types::keyWord;
+			ret.token.secondaryType = Token::KeyWords::if_;
+			ret.expressions[0] = expr;
+			ret.statements[0] = firstBlock;
+
+			return ret;
 		}
 	}
 

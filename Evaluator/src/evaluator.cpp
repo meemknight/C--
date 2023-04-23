@@ -51,7 +51,7 @@ void exectueFromLanguageString(std::string language)
 
 		}
 	}
-
+	
 	delete[] allocator.initialBaseMemory;
 
 }
@@ -84,6 +84,97 @@ bool execute(Statement program, std::string &err, Variables &variables)
 					if (!err.empty()) { return 0; }
 
 					std::cout << v.formatValue() << "\n";
+					break;
+				}
+
+				case Token::KeyWords::if_:
+				{
+					if (currentStatement->statementsCount != 3 &&
+						currentStatement->statementsCount != 2)
+					{
+						err = "Internal evaluator error: if expects 2 or 3 staements";
+						return 0;
+					}
+
+					if(currentStatement->expressionsCount != 1)
+					{
+						err = "Internal evaluator error: if expects 1 expression";
+						return 0;
+					}
+
+					Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
+					if (!v.toBool()) 
+					{
+						err = "Can't convert to bool in if expression evaluation: " + v.format();
+						return 0; 
+					}
+
+					if (v.reprezentation.i)
+					{
+						auto rez = execute(currentStatement->statements[0], err, variables);
+						if (!rez) { return 0; }
+					}
+					else
+					{
+						if (currentStatement->statementsCount == 3)
+						{
+							//else statement
+							auto rez = execute(currentStatement->statements[1], err, variables);
+							if (!rez) { return 0; }
+						}
+					}
+
+
+					break;
+				}
+
+				case Token::KeyWords::while_:
+				{
+					if (currentStatement->statementsCount != 3 &&
+						currentStatement->statementsCount != 2)
+					{
+						err = "Internal evaluator error: while expects 2 or 3 staements";
+						return 0;
+					}
+
+					if (currentStatement->expressionsCount != 1)
+					{
+						err = "Internal evaluator error: while expects 1 expression";
+						return 0;
+					}
+
+					bool returnedTrueOnce = 0;
+					while (true)
+					{
+						Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
+						if (!v.toBool())
+						{
+							err = "Can't convert to bool in while expression evaluation: " + v.format();
+							return 0;
+						}
+
+						if (v.reprezentation.i)
+						{
+							auto rez = execute(currentStatement->statements[0], err, variables);
+							if (!rez) { return 0; }
+							returnedTrueOnce = 1;
+						}
+						else 
+						{
+							if (!returnedTrueOnce)
+							{
+								if (currentStatement->statementsCount == 3)
+								{
+									//else statement
+									auto rez = execute(currentStatement->statements[1], err, variables);
+									if (!rez) { return 0; }
+								}
+							}
+
+							break;
+						}
+					}
+
 					break;
 				}
 

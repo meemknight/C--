@@ -495,7 +495,7 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::less:
 	{
 		Value rez;
-		rez.toBool();
+		rez.type = Value::boolean;
 		rez.reprezentation.i = a.smaller(b, err);
 		return rez;
 		break;
@@ -504,7 +504,7 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::leesEqual:
 	{
 		Value rez;
-		rez.toBool();
+		rez.type = Value::boolean;
 		rez.reprezentation.i = a.smallerEqual(b, err);
 		return rez;
 		break;
@@ -513,7 +513,7 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::greater:
 	{
 		Value rez;
-		rez.toBool();
+		rez.type = Value::boolean;
 		rez.reprezentation.i = a.greater(b, err);
 		return rez;
 		break;
@@ -522,7 +522,7 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 	case Token::TypeOpperators::greaterEqual:
 	{
 		Value rez;
-		rez.toBool();
+		rez.type = Value::boolean;
 		rez.reprezentation.i = a.greaterEqual(b, err);
 		return rez;
 		break;

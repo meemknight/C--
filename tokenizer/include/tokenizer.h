@@ -131,6 +131,7 @@ struct Token
 		{
 			none = 0,
 			if_,
+			else_,
 			while_,
 			int32_,
 			float_,
@@ -147,6 +148,7 @@ struct Token
 	constexpr static char *keyWords[KeyWords::keyWordsCount] = {
 		"",
 		"if",
+		"else",
 		"while",
 		"int32",
 		"float",
