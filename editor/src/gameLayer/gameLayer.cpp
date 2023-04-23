@@ -11,6 +11,7 @@
 #include "tokenizer.h"
 #include <TextEditor.h>
 #include <fstream>
+#include <evaluator.h>
 
 TextEditor textEditor;
 
@@ -34,8 +35,11 @@ bool initGame()
 	return true;
 }
 
-std::vector<Token> tokens;
-
+std::vector<std::string> tokens;
+static void callback(std::string s)
+{
+	tokens.push_back(s);
+}
 
 bool gameLogic(float deltaTime)
 {
@@ -62,16 +66,29 @@ bool gameLogic(float deltaTime)
 
 	if (ImGui::Begin("Console"))
 	{
-		if (ImGui::Button("test"))
+		if (ImGui::Button("test tokens"))
 		{
 			tokens.clear();
 			auto rez = textEditor.GetText();
-			tokens = tokenize(rez);
+			auto rez2 = tokenize(rez);
+			for (auto &i : rez2)
+			{
+				tokens.push_back(i.format());
+			}
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("execute"))
+		{
+			tokens.clear();
+			auto rez = textEditor.GetText();
+			exectueFromLanguageString(rez, callback);
 		}
 
 		for (auto &t : tokens)
 		{
-			ImGui::Text(t.format().c_str());
+			ImGui::Text(t.c_str());
 		}
 
 	}

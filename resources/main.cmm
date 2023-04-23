@@ -1,13 +1,19 @@
+{	
+	int32 a = 0;
+	int32 b = 1;
 
-
-void main()
-{
-	int32 test = 0 0 0.0111;
-	0.000.1 "error"
-
-	" long string 1234 .+=+ + "
-
-	int32 a; a = a + b+a + 1+1+b+1 + b + 10.0 + a;
-
-	return 0;
+	int32 counter = 10;
+	while(counter > 0)
+	{
+		int32 old = a;
+		a = a + b;
+		b = old;
+		counter = counter -1;
+	}else
+	{
+		
+	}
+	
+	print(a);
+	print("done");
 }

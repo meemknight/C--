@@ -3,10 +3,13 @@
 #include <parser.h>
 #include <evaluator.h>
 
+void callback(std::string t)
+{
+	std::cout << t;
+}
+
 int main()
 {
-
-
 
 	//parse(tokenize("-2 + 3)"));
 
@@ -18,22 +21,26 @@ int main()
 	exectueFromLanguageString(
 R"#(
 {	
+	int32 a = 0;
+	int32 b = 1;
+
 	int32 counter = 10;
-	
 	while(counter > 0)
 	{
-		print(counter);
-		counter = counter - 1;
+		int32 old = a;
+		a = a + b;
+		b = old;
+		counter = counter -1;
 	}else
 	{
-		print("executed 0 times");
+		
 	}
-
+	
+	print(a);
 	print("done");
 }
-)#"
+)#", callback
 );
-
 
 	std::cout << "\n";
 	std::cout << "done";

@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 
-void exectueFromLanguageString(std::string language)
+void exectueFromLanguageString(std::string language, void(*printCallback)(std::string))
 {
 
 	FreeListAllocator allocator;
@@ -20,7 +20,7 @@ void exectueFromLanguageString(std::string language)
 	{
 		if (tokens[i].type == Token::Types::error)
 		{
-			std::cout << "Tokenizer error: " + tokens[i].text << "\n";
+			printCallback("Tokenizer error: " + tokens[i].text + "\n");
 			goodFlag = 0;
 		}
 		else if (tokens[i].type == Token::Types::comment)
@@ -40,14 +40,14 @@ void exectueFromLanguageString(std::string language)
 		parser.tokens = &tokens;
 
 		auto ast = parser.program();
-		if (!parser.err.empty()) { std::cout << "Parser error: " << parser.err << "\n"; }
+		if (!parser.err.empty()) {printCallback("Parser error: " + parser.err + "\n"); }
 		else
 		{
 			Variables variables;
 			std::string err = "";
-			execute(ast, err, variables);
+			execute(ast, err, variables, printCallback);
 
-			if (!err.empty()) { std::cout << "Runtime error: " << err << "\n"; }
+			if (!err.empty()) { printCallback("Runtime error: " + err + "\n"); }
 
 		}
 	}
@@ -56,7 +56,7 @@ void exectueFromLanguageString(std::string language)
 
 }
 
-bool execute(Statement program, std::string &err, Variables &variables)
+bool execute(Statement program, std::string &err, Variables &variables, void(*printCallback)(std::string))
 {
 
 	Statement *currentStatement = &program;
@@ -83,7 +83,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 					Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
 					if (!err.empty()) { return 0; }
 
-					std::cout << v.formatValue() << "\n";
+					printCallback( v.formatValue() + "\n");
 					break;
 				}
 
@@ -103,6 +103,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 					}
 
 					Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
+					if (!err.empty()) { return 0; }
 					if (!v.toBool()) 
 					{
 						err = "Can't convert to bool in if expression evaluation: " + v.format();
@@ -111,7 +112,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 
 					if (v.reprezentation.i)
 					{
-						auto rez = execute(currentStatement->statements[0], err, variables);
+						auto rez = execute(currentStatement->statements[0], err, variables, printCallback);
 						if (!rez) { return 0; }
 					}
 					else
@@ -119,7 +120,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 						if (currentStatement->statementsCount == 3)
 						{
 							//else statement
-							auto rez = execute(currentStatement->statements[1], err, variables);
+							auto rez = execute(currentStatement->statements[1], err, variables, printCallback);
 							if (!rez) { return 0; }
 						}
 					}
@@ -147,6 +148,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 					while (true)
 					{
 						Value v = evaluateExpression(&currentStatement->expressions[0], err, variables);
+						if (!err.empty()) { return 0; }
 						if (!v.toBool())
 						{
 							err = "Can't convert to bool in while expression evaluation: " + v.format();
@@ -155,7 +157,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 
 						if (v.reprezentation.i)
 						{
-							auto rez = execute(currentStatement->statements[0], err, variables);
+							auto rez = execute(currentStatement->statements[0], err, variables, printCallback);
 							if (!rez) { return 0; }
 							returnedTrueOnce = 1;
 						}
@@ -166,7 +168,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 								if (currentStatement->statementsCount == 3)
 								{
 									//else statement
-									auto rez = execute(currentStatement->statements[1], err, variables);
+									auto rez = execute(currentStatement->statements[1], err, variables, printCallback);
 									if (!rez) { return 0; }
 								}
 							}
@@ -265,7 +267,7 @@ bool execute(Statement program, std::string &err, Variables &variables)
 				{
 					variables.push();
 
-					auto rez = execute(currentStatement->statements[0], err, variables);
+					auto rez = execute(currentStatement->statements[0], err, variables, printCallback);
 
 					if (!rez)
 					{

@@ -4,5 +4,5 @@
 
 
 
-bool execute(Statement program, std::string &err, Variables &variables);
-void exectueFromLanguageString(std::string language);
+bool execute(Statement program, std::string &err, Variables &variables, void(*printCallback)(std::string));
+void exectueFromLanguageString(std::string language, void(*printCallback)(std::string));
