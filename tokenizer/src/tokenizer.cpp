@@ -64,12 +64,28 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		returnVal.type = Token::Types::semicolin;
 		break;
 	case '+':
-		returnVal.type = Token::Types::op;
-		returnVal.secondaryType = Token::TypeOpperators::plus;
+		if (match('+'))
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::plusplus;
+		}
+		else
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::plus;
+		}
 		break;
 	case '-':
-		returnVal.type = Token::Types::op;
-		returnVal.secondaryType = Token::TypeOpperators::minus;
+		if (match('-'))
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::minusminus;
+		}
+		else
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::minus;
+		}
 		break;
 
 	case '*':
@@ -121,8 +137,16 @@ Token tokenize(const char *begin, const char *end, const char *&outBegin, const 
 		}
 
 	case '!':
-		returnVal.type = Token::Types::op;
-		returnVal.secondaryType = Token::TypeOpperators::negation;
+		if (match('='))
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::notEquals;
+		}
+		else
+		{
+			returnVal.type = Token::Types::op;
+			returnVal.secondaryType = Token::TypeOpperators::negation;
+		}
 		break;
 
 	case '&':

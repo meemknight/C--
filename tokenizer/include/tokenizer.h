@@ -80,7 +80,9 @@ struct Token
 		{
 			none = 0,
 			plus,
+			plusplus,
 			minus,
+			minusminus,
 			multiplication,
 			division,
 			modulo,
@@ -105,7 +107,9 @@ struct Token
 	constexpr static char *opperators[TypeOpperators::OpperatorsCount] = {
 		"",
 		"+",
+		"++",
 		"-",
+		"--",
 		"*",
 		"/",
 		"%",

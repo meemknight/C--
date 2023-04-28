@@ -87,12 +87,16 @@ Expression grammar:
 	expression		-> assignment ;
 	assignment		-> (USER_DEFINED_IDENTIRIER "=" assignment) | equality
 																	//todo add && here
-																	//todo add & here ?
 	equality		-> comparison ( ( "!=" | "==" ) comparison )* ;
 	comparison		-> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+																	//todo add & here ?
+
 	term			-> factor ( ( "-" | "+" ) factor )* ;
 	factor			-> unary ( ( "/" | "*" | "%" ) unary )* ;
-	unary			-> ( "!" | "-" | "~" ) unary | primary ;
+	unary			-> ( "!" | "-" | "~" ) unary | prefixIncrement | primary ;
+
+	prefixIncrement	-> ++ USER_DEFINED_IDENTIRIER | -- USER_DEFINED_IDENTIRIER
+
 	primary			-> NUMBER | STRING | "true" | "false" | USER_DEFINED_IDENTIRIER
 				   | "(" expression ")" ;
 
@@ -101,7 +105,6 @@ Expression grammar:
 
 
 Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allocator, std::string &error);
-
 
 struct Parser
 {
@@ -113,7 +116,6 @@ struct Parser
 
 	void sincronize()
 	{
-
 		while (!isAtEnd())
 		{
 			if (previous().type == Token::Types::semicolin)return;
@@ -232,10 +234,39 @@ struct Parser
 			*op.right = right;
 			return op;
 		}
+		else if (
+			peek(Token(Token::Types::op, Token::TypeOpperators::minusminus)) ||
+			peek(Token(Token::Types::op, Token::TypeOpperators::plusplus))
+			)
+		{
+			return prefixIncrement();
+		}
 		else
 		{
 			return primary();
 		}
+	}
+
+	Expression prefixIncrement()
+	{
+		if (!err.empty()) { return {}; }
+
+		if (match(Token(Token::Types::op, Token::TypeOpperators::minusminus))
+			|| consume(Token(Token::Types::op, Token::TypeOpperators::plusplus))
+			)
+		{
+			Expression op = createExpressionFromSingleToken(previous(), *allocator, err);
+
+			if (consume(Token::Types::userDefinedWord))
+			{
+				Expression var = createExpressionFromSingleToken(previous(), *allocator, err);
+				*op.right = var;
+				return op;
+			}
+
+		}
+
+		return {};
 	}
 
 	Expression factor()

@@ -528,6 +528,15 @@ Value performComputation(int type, Value a, Value b, std::string &err)
 		break;
 	}
 
+	case Token::TypeOpperators::notEquals:
+	{
+		Value rez;
+		rez.type = Value::boolean;
+		rez.reprezentation.i = a.notEquals(b, err);
+		return rez;
+		break;
+	}
+
 	default:
 		err = "Internal evaluator error, not a double opperand"; return {};
 	break;
@@ -625,7 +634,9 @@ Value evaluateExpression(Expression *e, std::string &err, Variables &vars)
 		if (
 			e->token.secondaryType != Token::TypeOpperators::minus &&
 			e->token.secondaryType != Token::TypeOpperators::logicNot &&
-			e->token.secondaryType != Token::TypeOpperators::negation 
+			e->token.secondaryType != Token::TypeOpperators::negation &&
+			e->token.secondaryType != Token::TypeOpperators::minusminus &&
+			e->token.secondaryType != Token::TypeOpperators::plusplus
 			)
 		{
 			if (!e->left || !e->right)
@@ -653,6 +664,46 @@ Value evaluateExpression(Expression *e, std::string &err, Variables &vars)
 			if (!err.empty()) { return {}; }
 
 			return rez;
+		}if (
+			e->token.secondaryType == Token::TypeOpperators::plusplus ||
+			e->token.secondaryType == Token::TypeOpperators::minusminus
+			)
+		{
+			if (e->right->token.type == Token::Types::userDefinedWord)
+			{
+				if (!e->right->tokenString) { err = "Internal interpretor error: tokenString is nullptr at --/++."; return {}; }
+
+				std::string varName = e->right->tokenString;
+				auto var = vars.getVariable(varName);
+
+				if (!var)
+				{
+					err = "unknown variable at --/++ " + varName; return {};
+				}
+
+				if (var->isNone()) { err = "Internal interpretor error: empty var at --/++."; return {}; }
+				if (var->isString()) { err = "Interpretor error: can't use string with --/++."; return {}; }
+				
+				if (e->token.secondaryType == Token::TypeOpperators::plusplus)
+				{
+					if (var->isInt32()) { var->reprezentation.i++; }
+					if (var->isReal32()) { var->reprezentation.f++; }
+					if (var->isBool()) { var->reprezentation.i = (bool)var->reprezentation.i; }
+				}
+				else if (e->token.secondaryType == Token::TypeOpperators::minusminus)
+				{
+					if (var->isInt32()) { var->reprezentation.i--; }
+					if (var->isReal32()) { var->reprezentation.f--; }
+					if (var->isBool()) { err = "Interpretor error: can't use bool with --."; return {}; }
+				}
+				else { assert(0); }
+				
+
+			}
+			else
+			{
+				err = "Internal interpretor error: ++ / -- expected variable";
+			}
 		}
 		else if (e->token.secondaryType == Token::TypeOpperators::asignment)
 		{
@@ -760,6 +811,7 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 	case Token::TypeOpperators::modulo:
 	case Token::TypeOpperators::asignment:
 	case Token::TypeOpperators::equals:
+	case Token::TypeOpperators::notEquals:
 	case Token::TypeOpperators:: and:
 	case Token::TypeOpperators:: or :
 	case Token::TypeOpperators::logicAnd:
@@ -770,12 +822,14 @@ Expression createExpressionFromSingleToken(Token &token, FreeListAllocator &allo
 	case Token::TypeOpperators::greater:
 	case Token::TypeOpperators::greaterEqual:
 	allocateMemoryForTheExpression(returnVal, allocator, 1, 1, token.text);
-
+	
 	break;
 
 
 	case Token::TypeOpperators::negation:
 	case Token::TypeOpperators::logicNot:
+	case Token::TypeOpperators::plusplus:
+	case Token::TypeOpperators::minusminus:
 	allocateMemoryForTheExpression(returnVal, allocator, 0, 1, token.text); //we have something on the right
 
 	break;
